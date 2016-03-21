@@ -1,0 +1,261 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.toonWeekstaten;
+import dataVerloning.urenPerMedewerker;
+import dataVerloning.weekstaatBijzSQLRec;
+import dataVerloning.weekstaatSQLrec;
+import dataVerloning.weekstaatWerkSQLRec;
+import dataVerloning.werkWeekstaten;
+import dojo.widgets.BarGraphData;
+import dojo.widgets.DojoBarGraph;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoLib;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.addRecord;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler werkenMetWeekstaat type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "werkenMetWeekstaat"}
+    //=============================================================================================================
+    // Grids, boxes etc.
+    //=============================================================================================================
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[weekGrid,
+                    buttonGrid, weekstaatArray_ui, msgTextLabel]};
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    //records
+    //=============================================================================================================
+    weekstaatWerkSQLArray weekstaatWerkSQLRec[0];
+    weekstaatBijzSQLArray weekstaatBijzSQLRec[0];
+    weekstaatArray weekstaatSQLrec[0];
+    selectedrecord toonWeekstaten;
+    urenPerMedewerker urenPerMedewerker;
+    //=============================================================================================================
+    //widgets
+    //=============================================================================================================
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, fontWeight = "bold", color = "Blue"};
+    //=============================================================================================================
+    //variabelen
+    //=============================================================================================================
+    weeknummer int;
+    voorman string;
+    aantalAkkoord int;
+    aantalNietAkkoord int;
+    uren decimal(5, 2);
+    medew int;
+    weekstaten toonWeekstaten[0];
+    weekstaatrec toonWeekstaten;
+
+    werkweekstaat werkWeekstaten[0];
+    werkweekstaatrec werkWeekstaten;
+
+    weekstaatArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 2}, columns =[
+                    new DataGridColumn{name = "MedewNaam", displayName = "Medewerkernaam", width = 250},
+                    new DataGridColumn{name = "UrenTotaal", displayName = "Uren totaal", width = 130},
+                    new DataGridColumn{name = "UrenAkkoord", displayName = "Uren Akk.", width = 130},
+                    new DataGridColumn{name = "Akkoord", displayName = "Akkoord", width = 120}
+            ], data = weekstaten as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ], editorBehaviors =[opmaakTabel]};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    WeeknrTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Weeknummer:"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, cellPadding = 4, rows = 1, columns = 4, children =[
+                    selectButton, backButton, addButton]};
+    selectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/kies.png' border=0  width=47 height=47   style='cursor: hand;'  title='Kies'> ", onClick ::= selectButton_onClick};
+    weekGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 3, children =[
+                    RGMGrid, BarGraph, urenGrid]};
+
+    urenGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 3}, cellPadding = 4, rows = 4, columns = 2, children =[
+                    verschilTextField, realTextField, PlanTextField,
+                    VerschilTextLabel, realTextLabel, UrenKopTextLabel,
+                    GeplandTextLabel]};
+    GeplandTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 1}, text = "1. Uren gepland ", fontWeight = "bold"};
+    UrenKopTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1, horizontalSpan = 2}, text = "Uren gerealiseerd tot week  ",
+
+            fontWeight = "bold", color = "MidnightBlue"};
+    realTextLabel TextLabel{layoutData = new GridLayoutData{row = 3, column = 1}, text = "2. Uren gerealiseerd", fontWeight = "bold"};
+    VerschilTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 1}, text = "Verschil", fontWeight = "bold"};
+    PlanTextField TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}};
+    realTextField TextLabel{layoutData = new GridLayoutData{row = 3, column = 2}};
+    verschilTextField TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}};
+    BarGraph DojoBarGraph{layoutData = new GridLayoutData{row = 1, column = 2}, width = "125", height = "125", barGap = 0, vertical = true, themeColor = DojoLib.CHART_COLOR_THEME_ORANGE
+
+    };
+    actWeek int;
+    urenplan decimal(9, 2);
+    urenreal decimal(9, 2);
+    verschil decimal(9, 2);
+    week string;
+    toonRGM boolean = false;
+    RGMGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 1}, cellPadding = 4, rows = 1, columns = 2, children =[WeeknrTextLabel
+            ]};
+    RGMButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Uren", onClick ::= RGMButton_onClick};
+    addButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/add.png' border=0  width=47 height=47   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= addButton_onClick};
+ 	startrij int;
+    //=============================================================================================================
+    //Main
+    //=============================================================================================================
+    
+    function start()
+    //getData();
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+
+        voorman = libraryVerloning.userid;
+        //voorman = "faessenw";
+        weekstaatArray_ui.disabled = true;
+        //weeknummer = 201502;
+       
+            call db2Service.getWeekstaat(weeknummer, voorman,
+                    weekstaatWerkSQLArray) returning to weekstaatRetrieved;
+
+       
+        week = weeknummer as string;
+
+        call db2Service.getRealisatie(voorman, week, urenPlan, urenReal)
+                returning to urenRetrieved;
+    end
+
+    function urenRetrieved(urenPlan decimal(9, 2) in, urenReal decimal(9, 2) in, retResult string in)
+        weekstaatArray_ui.startRow = startrij;
+        PlanTextField.text = ruiFunctions.numberReturnComma(urenPlan as string);
+        realTextField.text = ruiFunctions.numberReturnComma(urenreal as string);
+        verschiluren decimal(9, 2) = urenreal - urenplan;
+        verschilTextField.text = ruiFunctions.numberReturnComma(verschiluren as string);
+		if (verschiluren > 0)
+			verschilTextField.color="red";
+			verschilTextField.backgroundColor="white";
+		else
+			verschilTextField.color="green";
+			verschilTextField.backgroundColor="white";
+		end
+		weekstaatArray_ui.gotoPage(startrij);
+        bargraph.data =[new BarGraphData{value = urenplan},
+                new BarGraphData{value = urenreal}];
+        UrenKopTextLabel.text = "Uren gerealiseerd tot " +
+                WeeknrTextLabel.text;
+    end
+
+    function weekstaatRetrieved(weekstaatWerkSQLArray weekstaatWerkSQLRec[] in, retResult string in)
+        weekstaatRec toonWeekstaten;
+
+        weekstaten.removeAll();
+        werkweekstaat.removeAll();
+        gevonden boolean = false;
+        stop boolean = false;
+        try
+            for(i int from 1 to weekstaatWerkSQLArray.getsize())
+                // bestaat medewerker al in overzicht
+                
+                weekstaatrec.MedewId = weekstaatWerkSQLArray[i].IUMDWID;
+                weekstaatrec.MedewNaam = weekstaatWerkSQLArray[i].IAMNAAM;
+                weekstaatrec.UrenTotaal = weekstaatWerkSQLArray[i].IUGWKUREN +
+                        weekstaatWerkSQLArray[i].IBAANTAL;
+                weekstaatrec.UrenAkkoord = weekstaatWerkSQLArray[i].ACCBUREN +
+                        weekstaatWerkSQLArray[i].ACCWUREN;
+
+                weekstaten.appendElement(weekstaatrec);
+
+            end
+        onException(exception AnyException)
+        end
+
+        weekstaatArray_ui.data = weekstaten as any[];
+        weekstaatArray_ui.disabled = false;
+        msgTextLabel.text = retresult;
+    end
+
+    function initRui()
+        msgTextLabel.text = "";
+        selectbutton.disabled = true;
+        selectbutton.text = libraryVerloning.SEL_DIS_BUTTON;
+        if(Startrij == 0)
+            startrij = 1;
+        end
+        
+       
+    end
+
+    private function cellClicked(grid DataGrid in)
+        selectedRecord = weekstaatArray_ui.getSelection()[1] as toonWeekstaten;
+        selectbutton.disabled = false;
+        selectbutton.text = libraryVerloning.SEL_BUTTON;
+         startRij = weekstaatArray_ui.getCurrentPageIndex();
+        
+    end
+
+    function selectButton_onClick(event Event in)
+    	
+        infobus.publish("WEEKSTAAT_MEDEW", "");
+
+    end
+
+    function backButton_onClick(event Event in)
+        infobus.publish("SEL_WEEKSTAAT", "");
+    end
+
+    private function opmaakTabel(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+
+        if(column.name == "Akkoord")
+
+            if(rowData.Urentotaal as decimal(5, 2) ==
+                    rowData.UrenAkkoord as decimal(5, 2) and
+                    rowData.UrenAkkoord as decimal(5, 2) != 0)
+
+                return(new image{src = "images/gereed.jpg"});
+
+            else
+                return(new image{src = "images/nietakkoord.jpg"});
+
+            end
+        end
+        if(column.name == "UrenAkkoord")
+
+            return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.UrenAkkoord) as string});
+        end
+        if(column.name == "UrenTotaal")
+
+            return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.UrenTotaal) as string});
+        end
+
+    end
+
+    function RGMButton_onClick(event Event in)
+        if(toonRGM)
+            toonRGM = false;
+            urengrid.visible = false;
+            BarGraph.visible = false;
+        else
+            toonRGM = true;
+            urengrid.visible = true;
+            BarGraph.visible = true;
+        end
+    end
+
+    private function addButton_onClick(e Event in)
+        addRecord addRecord;
+        addrecord.week = weeknummer;
+
+        infobus.publish("ADD_BIJZ_UREN_MEDEW", addrecord);
+
+    end
+end

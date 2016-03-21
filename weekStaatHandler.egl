@@ -1,0 +1,837 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.Box;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import dataFortron.baauthpSQLrec;
+import dataFortron.bausrinfpSQLrec;
+import dataVerloning.badocpfRec;
+import dataVerloning.boninfo;
+import dataVerloning.inamdwpfSQLrec;
+import dataVerloning.inbasInfSQLrec;
+import dataVerloning.insrtbupfSQLrec;
+import dataVerloning.urenPerMedewerker;
+import digiBonHandlers.ploegCapaciteit;
+import digiBonHandlers.showRie;
+import digiBonHandlers.tekenenBonHandler;
+import digiBonHandlers.toonPlanning;
+import digiBonHandlers.voormanPlanning;
+import libraries.addRecord;
+import libraries.libraryVerloning;
+import mainHandlers.keuzeMenuVerloning;
+import mainHandlers.logonWindow;
+import mainHandlers.whatsNew;
+import services.SQLservice;
+
+//
+//
+
+handler weekStaatHandler type RUIhandler{initialUI =[werkenMetWeekstatenUI
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "Werken Met Weekstaten"}
+
+    //========================================================================================================================
+    // Grids, boxes etc.
+    //========================================================================================================================
+    //werkenMetWeekstatenBox
+    
+    werkenMetWeekstatenUI GridLayout{columns = 3, rows = 3, cellPadding = 4, children =[
+                    topGrid, werkenMetWeekstatenBox
+            ], backgroundColor = "#1F9CC4"};
+
+    //	
+    werkenMetWeekstatenBox Box{layoutData = new GridLayoutData{row = 2, column = 1}};
+
+    db2Service SQLservice{@DedicatedService};
+    kopTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}, text = "Weekstaat"};
+    wrkWeekstaat werkenMetWeekstaat;
+    wrkBon werkenMetUrenPerBon;
+    wrkWeekstaatMedew werkenMetUrenMedewerker;
+    selWeekstaat selectWeekNummer;
+    selBonnen selecteerBon;
+    dspObject detailObject;
+    wrkPosten werkenMetPosten;
+    showRie ShowRie;
+    toonPlan toonPlanning;
+    whatsNew whatsNew;
+    ploegCapaciteit ploegCapaciteit; 
+
+    deturen onderhoudDetailUren;
+    detBijzondereUren detailbijzondereUren;
+    logon logonwindow;
+    tekenen tekenenBonHandler;
+    keuzeMenu keuzeMenuVerloning{};
+    medewerkerArray inamdwpfSQLrec[0];
+    komponentenArray insrtbupfSQLrec[0];
+    urenPerMedewerker urenPerMedewerker;
+    wrkMatHandler werkenMetMaterialenHandler;
+    voormanPlan voormanPlanning;
+    badocpfRec badocpfRec;
+    baauthpSQLrec baauthpSQLrec;
+    bausrinfArray bausrinfpSQLrec[];
+
+    Mdw string[0];
+    MdwNr int[0];
+    Mdwgeg string;
+    komp string[0];
+    kompCode string[0];
+    kompgeg string;
+
+    voorman string;
+    Image Image{layoutData = new GridLayoutData{row = 1, column = 1}, src = "images/logo.png",
+    	width = "175",
+    	height = "80"};
+    mainTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Digitale glazenwasser 3.1", fontWeight = "bold", color = "#223370", fontSize = "24"};
+    topGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 1}, cellPadding = 4, rows = 1, columns = 2, children =[
+                    mainTextLabel, Image]};
+
+    actWeeknummer int;
+    firstTime boolean = true;
+    planning boolean = true;
+
+    function start()
+
+    // subscribe to infobus
+        getKomponenten();
+        getActueleWeek();
+
+        infobusName string = "WEEKSTAAT_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "WRK_WEEKSTATEN";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "SEL_WEEKSTAAT";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "UREN_MEDEW_BON";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "BIJZ_UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DEL_UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DEL_UREN_MEDEW_BON";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "ADD_UREN_MEDEW_BON";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "ADD_UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DEL_BIJZ_UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "ADD_BIJZ_UREN_MEDEW";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "SEL_BONNEN";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "SEL_BONNEN_REF";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "WRK_BON";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "KEUZEMENU";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "TEKEN";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DSP_OBJECT";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "WRK_POSTEN";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "WRK_MATERIALEN";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DSP_RIE";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "PLANNING";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "PLANNING_WEEK";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "PLOEG_CAP";
+        infobus.subscribe(infobusName, infobusEvents);
+        getLogon();
+        werkenMetWeekstatenBox.children =[logon.ui];
+        //    werkenMetWeekstatenBox.children =[logon.ui];
+        
+    end
+
+    function infobusEvents(eventName string in, dataObject any in)
+
+        case(eventName)
+
+            when("KEUZEMENU")
+
+                voorman = libraryVerloning.userid;
+               
+                if(firstTime)
+                    keuzemenu.planButton.disabled = true;
+                    getVoorman();
+                    getMedewerkers();
+                    firstTime = false;
+                else
+                    werkenMetWeekstatenBox.children =[keuzemenu.ui];
+                end
+            when("PLOEG_CAP")
+                getploegCapaciteit();
+                ploegCapaciteit.userid = libraryVerloning.userid;
+                ploegCapaciteit.voorman = libraryVerloning.voormanNummer;
+              	ploegCapaciteit.getData();
+             
+                werkenMetWeekstatenBox.children =[ploegCapaciteit.ui];
+
+            when("PLANNING")
+                getPlanning();
+                voormanPlan.voormanID = libraryVerloning.userid;
+                case(keuzemenu.jaarCombo.selection)
+                	when(1)
+                		voormanPlan.jaar=DateTimeLib.yearOf(DateTimeLib.currentTimeStamp())-1 as int;
+                	when(2)
+                		voormanPlan.jaar=DateTimeLib.yearOf(DateTimeLib.currentTimeStamp()) as int;
+                	when(3)
+                		voormanPlan.jaar=DateTimeLib.yearOf(DateTimeLib.currentTimeStamp())+1 as int;
+                	when(4)
+                		voormanPlan.jaar=DateTimeLib.yearOf(DateTimeLib.currentTimeStamp())+2 as int;
+                
+                end	 
+                
+                voormanPlan.voormanNaam = libraryVerloning.voormanNaam;
+                voormanPlan.voorman = libraryVerloning.voormanNummer;
+                if (planning)
+                	voormanPlan.getData();
+               end
+                werkenMetWeekstatenBox.children =[voormanPlan.ui];
+            when("PLANNING_WEEK")
+                getToonPlanning();
+                toonPlan.mainTextLabel.text = libraryVerloning.voormanNaam +
+                        " Planning week " + voormanPlan.selweek as string +
+                        " - " + voormanPlan.jaar as string;
+                toonPlan.jaar = voormanPlan.jaar;
+                toonPlan.voorman = voormanPlan.voorman;
+                toonPlan.week = voormanPlan.selweek;
+                toonPlan.getData();
+                werkenMetWeekstatenBox.children =[toonPlan.ui];
+
+            when("TEKEN")
+                getTeken();
+                bonnen boninfo[] = dataobject as boninfo[];
+                tekenen.bonArray = bonnen;
+
+                tekenen.getdata();
+                tekenen.toon();
+                werkenMetWeekstatenBox.children =[tekenen.tekenBonUI];
+
+            when("SEL_BONNEN")
+
+                getSelBonnen();
+                selBonnen.initRui();
+
+                if(selBonnen.firsttime)
+
+                    selBonnen.getBonnen();
+
+                    selBonnen.firsttime = false;
+                else
+                    selBonnen.bonnenPdaArray_ui.render();
+                end
+                if(libraryVerloning.zoeken)
+                    selBonnen.vulZoek();
+                    selBonnen.zoekBon();
+                end
+                werkenMetWeekstatenBox.children =[selBonnen.ui];
+            when("SEL_BONNEN_REF")
+
+                getSelBonnen();
+                selBonnen.initRui();
+                if(libraryVerloning.zoeken)
+                    selBonnen.vulZoek();
+                    selBonnen.zoekBon();
+                else
+                    selBonnen.getBonnen();
+                end
+                selBonnen.firsttime = false;
+
+                werkenMetWeekstatenBox.children =[selBonnen.ui];
+            when("WEEKSTAAT_MEDEW")
+                getwrkWeekstaatMedew();
+                wrkWeekstaatMedew.weeknummer = wrkWeekstaat.weeknummer;
+                wrkWeekstaatMedew.medewerker = wrkWeekstaat.selectedrecord.MedewId;
+                wrkWeekstaatMedew.voorman = voorman;
+                wrkWeekstaatMedew.initRui();
+                wrkWeekstaatMedew.getData();
+
+                weekTekst string = selWeekstaat.weeknummer as string;
+                wrkWeekstaatMedew.WeeknrTextLabel.text = "Weeknummer : " +
+                        weekTekst[1 : 4] + "-" + weekTekst[5 : 6] + " van : " +
+                        wrkWeekstaat.selectedrecord.MedewNaam;
+                werkenMetWeekstatenBox.children =[wrkWeekstaatMedew.ui];
+
+            when("WRK_WEEKSTATEN")
+                getwrkWeekstaat();
+                wrkWeekstaat.weeknummer = selWeekstaat.weeknummer;
+                wrkWeekstaat.actWeek = actWeeknummer;
+
+                wrkWeekstaat.initRui();
+                wrkWeekstaat.getData();
+                weekTekst string = selWeekstaat.weeknummer as string;
+                wrkWeekstaat.WeeknrTextLabel.text = "Weeknummer : " +
+                        weekTekst[1 : 4] + "-" + weekTekst[5 : 6];
+                werkenMetWeekstatenBox.children =[wrkWeekstaat.ui];
+            when("WRK_BON")
+                getwrkBon();
+
+                wrkBon.initRui();
+                wrkBon.bonnummer = selBonnen.selectedrecord.BABONNR;
+
+                wrkbon.getData();
+                wrkbon.urenGepland = selBonnen.selectedrecord.INUREN;
+                wrkBon.bonnummerTextLabel.text = "Bonnummer: " +
+                        selBonnen.selectedrecord.BABONNR + " / " +
+                        selBonnen.selectedrecord.INOBJECT + " " +
+                        selBonnen.selectedrecord.INPLAATS;
+
+                werkenMetWeekstatenBox.children =[wrkBon.ui];
+
+            when("UREN_MEDEW_BON")
+                getdetUren();
+                urenPerMedewerker = dataobject as urenPerMedewerker;
+                deturen.actie = "update";
+                deturen.backButton.visible = false;
+                weekTekst string = urenpermedewerker.WEEKNR as string;
+
+                deturen.detailWerkuren_ui.disabled = false;
+                deturen.soortBon = urenPerMedewerker.soortBon;
+                deturen.voorman = voorman;
+                try
+                    if(urenPerMedewerker.BONNR == 0)
+                        deturen.weeknummer = 0;
+                        deturen.medewerker = 0;
+                        deturen.detailWerkuren.IUWEEKNR = 0;
+                        deturen.detailWerkuren.IUVOLGNR = 0;
+                        deturen.detailWerkuren.IUBONNR = urenPerMedewerker.BONNR;
+                        deturen.detailWerkuren.IUMDWID = 0;
+                    else
+                        deturen.weeknummer = urenpermedewerker.WEEKNR;
+                        deturen.medewerker = urenpermedewerker.MDWID;
+                        deturen.detailWerkuren.IUMDWID = urenpermedewerker.MDWID;
+                        deturen.detailWerkuren.IUWEEKNR = urenpermedewerker.WEEKNR;
+                        deturen.detailWerkuren.IUVOLGNR = urenpermedewerker.VOLGNR;
+                        deturen.detailWerkuren.IUBONNR = urenpermedewerker.BONNR;
+
+                    end
+                onException(exception AnyException)
+                    deturen.weeknummer = 0;
+                    deturen.medewerker = 0;
+                    deturen.detailWerkuren.IUWEEKNR = 0;
+                    deturen.detailWerkuren.IUVOLGNR = 0;
+                    deturen.detailWerkuren.IUBONNR = urenpermedewerker.BONNR;
+                end
+                detUren.initRUi();
+                deturen.delButton.visible = false;
+
+                deturen.newButton.visible = true;
+                deturen.saveButton.visible = true;
+                deturen.newButton.disabled = false;
+                deturen.saveButton.disabled = false;
+                deturen.backtoBonButton.visible = true;
+                //deturen.detailWerkuren_IUBONNR_field.text=wrkbon.bonnummerTextLabel.text;
+                deturen.objectTextLabel.text = selBonnen.selectedrecord.INOBJECT +
+                        " " + selBonnen.selectedrecord.INADRES + " " +
+                        selBonnen.selectedrecord.INPOSTC + " " +
+                        selBonnen.selectedrecord.INPLAATS;
+
+                detUren.getData();
+                deturen.bepaalStartButton();
+                werkenMetWeekstatenBox.children =[deturen.ui];
+            when("ADD_UREN_MEDEW_BON")
+
+                getdetUren();
+                urenPerMedewerker = dataobject as urenPerMedewerker;
+                deturen.actie = "add";
+                deturen.backButton.visible = false;
+                deturen.voorman = voorman;
+                deturen.detailWerkuren_ui.disabled = false;
+                deturen.soortBon = selBonnen.selectedrecord.INSRTBON;
+                deturen.weeknummer = Actweeknummer;
+                deturen.actweeknummer = Actweeknummer;
+                deturen.medewerker = 0;
+                deturen.detailWerkuren.IUWEEKNR = Actweeknummer;
+                deturen.detailWerkuren.IUVOLGNR = 0;
+                deturen.detailWerkuren.IUBONNR = selBonnen.selectedrecord.BABONNR;
+                deturen.detailWerkuren.IUGWKUREN = 0;
+                detUren.initRUi();
+                deturen.detailWerkuren_IUWEEKNR_field.disabled = false;
+
+                deturen.delButton.visible = false;
+                deturen.delbutton.text = libraryVerloning.DEL_DIS_BUTTON;
+                deturen.newButton.visible = true;
+                deturen.saveButton.visible = false;
+                deturen.newbutton.text = libraryVerloning.ADD_BUTTON;
+                deturen.savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+                deturen.newButton.disabled = false;
+                deturen.saveButton.disabled = false;
+                deturen.backtoBonButton.visible = true;
+                //deturen.detailWerkuren_IUBONNR_field.text=wrkbon.bonnummerTextLabel.text;
+                deturen.objectTextLabel.text = selBonnen.selectedrecord.INOBJECT +
+                        " " + selBonnen.selectedrecord.INADRES + " " +
+                        selBonnen.selectedrecord.INPOSTC + " " +
+                        selBonnen.selectedrecord.INPLAATS;
+
+                deturen.enableUI();
+                deturen.bepaalStartButton();
+                werkenMetWeekstatenBox.children =[deturen.ui];
+
+            when("UREN_MEDEW")
+                getdetUren();
+                deturen.actie = "update";
+                deturen.detailWerkuren_ui.disabled = false;
+                deturen.backButton.visible = true;
+                deturen.backtoBonButton.visible = false;
+
+                deturen.voorman = voorman;
+                weekTekst string = selWeekstaat.weeknummer as string;
+                //                detUren.weekMedewTextLabel.text = "Weeknummer : " +
+                //                        weekTekst[1 : 4] + "-" + weekTekst[5 : 6] + " van : " +
+                //                        wrkWeekstaat.selectedrecord.MedewNaam;
+                
+                deturen.weeknummer = wrkWeekstaat.weeknummer;
+                deturen.medewerker = wrkWeekstaatMedew.selectedrecord.MDWID;
+                deturen.detailWerkuren.IUMDWID = wrkWeekstaatMedew.selectedrecord.MDWID;
+                deturen.detailWerkuren.IUWEEKNR = wrkWeekstaatMedew.selectedrecord.WEEKNR;
+                deturen.detailWerkuren.IUVOLGNR = wrkWeekstaatMedew.selectedrecord.VOLGNR;
+                deturen.detailWerkuren.IUBONNR = wrkWeekstaatMedew.selectedrecord.BONNR;
+                deturen.initRUI();
+                deturen.delButton.visible = false;
+                deturen.newButton.visible = true;
+                deturen.saveButton.visible = true;
+                deturen.newbutton.text = libraryVerloning.ADD_BUTTON;
+                deturen.savebutton.text = libraryVerloning.UPD_BUTTON;
+                deturen.buttonGrid.appendChild(deturen.backButton);
+
+                //deturen.object=wrkbon.bonnummerTextLabel.text;
+                detUren.getData();
+
+                werkenMetWeekstatenBox.children =[deturen.ui];
+            when("BIJZ_UREN_MEDEW")
+                getdetBijzUren();
+                detBijzondereUren.inbyzupfSQLrec_ui.disabled = false;
+                detBijzondereUren.inbyzupfSQLrec_IBCOCO_comboBox.values = libraryVerloning.Komponenten;
+                weektext string = selWeekstaat.weeknummer as string;
+                detBijzondereUren.weekMedewTextLabel.text = "Weeknummer : " +
+                        weekText[5 : 6] + "-" + weekText[1 : 4] + " van : " +
+                        wrkWeekstaat.selectedrecord.MedewNaam;
+                detBijzondereUren.weeknummer = wrkWeekstaat.weeknummer;
+                detBijzondereUren.medewerker = wrkWeekstaatMedew.selectedrecord.MDWID;
+                detBijzondereUren.inbyzupfSQLrec.IBMDWID = wrkWeekstaatMedew.selectedrecord.MDWID;
+                detBijzondereUren.inbyzupfSQLrec.IBWEEKNR = wrkWeekstaatMedew.selectedrecord.WEEKNR;
+                detBijzondereUren.inbyzupfSQLrec.IBVOLGNR = wrkWeekstaatMedew.selectedrecord.VOLGNR;
+                detBijzondereUren.inbyzupfSQLrec.IBDAG = wrkWeekstaatMedew.selectedrecord.DAG;
+
+                detBijzondereUren.delButton.visible = false;
+                detBijzondereUren.newButton.visible = true;
+                detBijzondereUren.saveButton.visible = true;
+                detBijzondereUren.initRui();
+                detBijzondereUren.getData();
+
+                werkenMetWeekstatenBox.children =[detBijzondereUren.ui];
+            when("DEL_BIJZ_UREN_MEDEW")
+                getdetBijzUren();
+                detBijzondereUren.inbyzupfSQLrec_ui.disabled = true;
+                detBijzondereUren.inbyzupfSQLrec_IBCOCO_comboBox.values = libraryVerloning.Komponenten;
+                weektext string = selWeekstaat.weeknummer as string;
+                detBijzondereUren.weekMedewTextLabel.text = "Weeknummer : " +
+                        weekText[5 : 6] + "-" + weekText[1 : 4] + " van : " +
+                        wrkWeekstaat.selectedrecord.MedewNaam;
+
+                detBijzondereUren.weeknummer = wrkWeekstaat.weeknummer;
+                detBijzondereUren.medewerker = wrkWeekstaatMedew.selectedrecord.MDWID;
+                detBijzondereUren.inbyzupfSQLrec.IBMDWID = wrkWeekstaatMedew.selectedrecord.MDWID;
+                detBijzondereUren.inbyzupfSQLrec.IBWEEKNR = wrkWeekstaatMedew.selectedrecord.WEEKNR;
+                detBijzondereUren.inbyzupfSQLrec.IBVOLGNR = wrkWeekstaatMedew.selectedrecord.VOLGNR;
+                detBijzondereUren.inbyzupfSQLrec.IBDAG = wrkWeekstaatMedew.selectedrecord.DAG;
+
+                detBijzondereUren.delButton.visible = true;
+                detBijzondereUren.newButton.visible = false;
+                detBijzondereUren.saveButton.visible = false;
+                detBijzondereUren.initRui();
+                detBijzondereUren.getData();
+
+                werkenMetWeekstatenBox.children =[detBijzondereUren.ui];
+
+            when("ADD_BIJZ_UREN_MEDEW")
+                getdetBijzUren();
+                addRecord addRecord;
+                addrecord = dataObject as addRecord;
+
+                detBijzondereUren.inbyzupfSQLrec_IBCOCO_comboBox.values = libraryVerloning.Komponenten;
+                weektext string = selWeekstaat.weeknummer as string;
+                detBijzondereUren.weekMedewTextLabel.text = "Weeknummer : " +
+                        weekText[5 : 6] + "-" + weekText[1 : 4] + " van : " +
+                        wrkWeekstaat.selectedrecord.MedewNaam;
+                detBijzondereUren.weeknummer = addrecord.week;
+                detBijzondereUren.medewerker = addrecord.mdw;
+                detBijzondereUren.detailWerkuren.IBWEEKNR = addrecord.week;
+                detBijzondereUren.detailWerkuren.IBMDWID = addrecord.mdw;
+
+                detBijzondereUren.inbyzupfSQLrec_IBWEEKNR_field.text = addrecord.week;
+                detBijzondereUren.inbyzupfSQLrec_IBWEEKNR_field.disabled = false;
+                detBijzondereUren.newButton.visible = true;
+                detBijzondereUren.saveButton.visible = false;
+                detBijzondereUren.delButton.visible = false;
+                detBijzondereUren.initRui();
+
+                werkenMetWeekstatenBox.children =[detBijzondereUren.ui];
+
+            when("DEL_UREN_MEDEW")
+                getdetUren();
+
+                deturen.actie = "delete";
+                deturen.initRUI();
+                deturen.backButton.visible = true;
+                deturen.backtoBonButton.visible = false;
+                deturen.detailWerkuren_ui.disabled = true;
+                weektext string = selWeekstaat.weeknummer as string;
+                //                detUren.weekMedewTextLabel.text = "Weeknummer : " +
+                //                        weekText[5 : 6] + "-" + weekText[1 : 4] + " van : " +
+                //                        wrkWeekstaat.selectedrecord.MedewNaam;
+                deturen.weeknummer = wrkWeekstaat.weeknummer;
+                deturen.medewerker = wrkWeekstaatMedew.selectedrecord.MDWID;
+                deturen.detailWerkuren.IUMDWID = wrkWeekstaatMedew.selectedrecord.MDWID;
+                deturen.detailWerkuren.IUWEEKNR = wrkWeekstaatMedew.selectedrecord.WEEKNR;
+                deturen.detailWerkuren.IUVOLGNR = wrkWeekstaatMedew.selectedrecord.VOLGNR;
+                deturen.detailWerkuren.IUBONNR = wrkWeekstaatMedew.selectedrecord.BONNR;
+                deturen.newButton.visible = false;
+
+                deturen.saveButton.visible = false;
+                deturen.delButton.visible = true;
+                deturen.delbutton.text = libraryVerloning.DEL_BUTTON;
+                detUren.getData();
+
+                werkenMetWeekstatenBox.children =[deturen.ui];
+
+            when("DEL_UREN_MEDEW_BON")
+                getdetUren();
+                deturen.actie = "delete";
+                urenPerMedewerker = dataobject as urenPerMedewerker;
+                deturen.detailWerkuren_ui.disabled = true;
+                deturen.backButton.visible = false;
+                deturen.backtoBonButton.visible = true;
+                deturen.delbutton.visible = true;
+                deturen.delbutton.text = libraryVerloning.DEL_BUTTON;
+
+                deturen.weeknummer = urenPerMedewerker.WEEKNR;
+                deturen.medewerker = urenPerMedewerker.MDWID;
+                deturen.detailWerkuren.IUMDWID = urenPerMedewerker.MDWID;
+                deturen.detailWerkuren.IUWEEKNR = urenPerMedewerker.WEEKNR;
+                deturen.detailWerkuren.IUVOLGNR = urenPerMedewerker.VOLGNR;
+                deturen.detailWerkuren.IUBONNR = urenPerMedewerker.BONNR;
+                deturen.soortBon = urenPerMedewerker.soortBon;
+                deturen.objectTextLabel.text = selBonnen.selectedrecord.INOBJECT +
+                        " " + selBonnen.selectedrecord.INADRES + " " +
+                        selBonnen.selectedrecord.INPOSTC + " " +
+                        selBonnen.selectedrecord.INPLAATS;
+                deturen.initRUI();
+                detUren.getData();
+
+                werkenMetWeekstatenBox.children =[deturen.ui];
+            when("SEL_WEEKSTAAT")
+                tijd timeStamp;
+                getSelWeekstaat();
+                getwrkWeekstaat();
+                wrkWeekstaat.startrij = 1;
+                selWeekstaat.weeknummerTextField.text = "";
+                selWeekstaat.msgTextLabel.text = "";
+                selWeekstaat.jaarList.value = DateTimeLib.yearOf(tijd) as string;
+                werkenMetWeekstatenBox.children =[selweekstaat.ui];
+
+            when("DSP_OBJECT")
+                getDspObject();
+                bonrecord inbasInfSQLrec = dataobject as inbasInfSQLrec;
+                dspObject.klantTextField.text = bonrecord.INKLANT;
+                dspObject.bonnummer = bonrecord.BABONNR;
+                dspObject.initRui();
+                dspObject.getdata();
+                dspObject.msgTextLabel.text = "";
+                werkenMetWeekstatenBox.children =[dspobject.ui];
+            when("WRK_POSTEN")
+                getWrkPosten();
+                bonrecord inbasInfSQLrec = dataobject as inbasInfSQLrec;
+                wrkPosten.bonnummer = bonrecord.BABONNR;
+                wrkPosten.initRui();
+                wrkPosten.getdata();
+                wrkPosten.msgTextLabel.text = "";
+                werkenMetWeekstatenBox.children =[wrkPosten.ui];
+            when("WRK_MATERIALEN")
+                getWrkMatHandler();
+                bonrecord inbasInfSQLrec = dataobject as inbasInfSQLrec;
+                wrkMatHandler.bonnummer = bonrecord.BABONNR;
+                wrkMatHandler.wrkMat.bonnummer = wrkMatHandler.bonnummer;
+                wrkMatHandler.wrkMat.initRui();
+                wrkMatHandler.wrkMat.getdata();
+                werkenMetWeekstatenBox.children =[wrkMatHandler.werkenMetMaterialenBox
+                ];
+            when("DSP_RIE")
+                getToonRie();
+                badocpfRec = dataobject as badocpfRec;
+                showRie.badocpfRec = badocpfRec;
+                showRie.vulDocs();
+                werkenMetWeekstatenBox.children =[showRie.ui];
+        end
+    end
+
+    function getActueleWeek()
+        datum date = DateTimeLib.currentDate();
+
+        call db2Service.getActueleWeek(datum, Actweeknummer)
+                returning to weekRetrieved onException fout;
+                
+		 
+
+    end
+
+	
+
+    function weekRetrieved(weeknummer int in, retResult string in)
+        actweeknummer = weeknummer;
+    end
+
+    function getMedewerkers()
+    // vul uren listbox
+    
+        call db2Service.getAllMedew(voorman, medewerkerArray)
+                returning to MDWRetrieved
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+    function MDWRetrieved(medewerkersArray inamdwpfSQLrec[] in, retResult string in)
+        Libraryverloning.EigenPloeg.removeAll();
+        Libraryverloning.EigenPloegNummer.removeAll();
+        Libraryverloning.medewerkers.removeAll();
+        Libraryverloning.medewerkersNummer.removeAll();
+        ploegIndex int = 0;
+        MdwGeg = "Maak een keuze";
+        Mdw.appendElement(Mdwgeg);
+        MdwNr.appendElement(0);
+        for(i int from 1 to medewerkersArray.getSize())
+            Mdwgeg = medewerkersArray[i].IAMNAAM;
+            Mdw.appendElement(Mdwgeg);
+            MdwNr.appendElement(medewerkersArray[i].IAMDWID);
+            if(medewerkersArray[i].IAMDWID == 0)
+                ploegIndex = i;
+            end
+            if(ploegIndex == 0)
+                Libraryverloning.EigenPloeg.appendElement(Mdwgeg);
+                Libraryverloning.EigenPloegNummer.appendElement(medewerkersArray[i].IAMDWID);
+            end            
+        end
+        Libraryverloning.medewerkers = mdw;
+        Libraryverloning.medewerkersNummer = mdwNr;
+    end
+
+    function getKomponenten()
+    // vul uren listbox
+    
+        call db2Service.getAllKomponenten(komponentenArray)
+                returning to KompRetrieved onException fout;
+
+    end
+
+    function KompRetrieved(komponentenArray insrtbupfSQLrec[] in, retResult string in)
+        KompGeg = "Maak een keuze";
+        Komp.appendElement(Kompgeg);
+        KompCode.appendElement(0);
+        for(i int from 1 to komponentenArray.getSize())
+            Kompgeg = komponentenArray[i].ISBUOMS;
+            Komp.appendElement(Kompgeg);
+            KompCode.appendElement(komponentenArray[i].ISCOCO);
+        end
+        Libraryverloning.Komponenten = komp;
+        Libraryverloning.komponentCode = kompCode;
+    end
+
+    function fout(exp AnyException in)
+        SysLib.writeStdout("Verbinding is verbroken. Sluit het programma af en start opnieuw!");
+    end
+
+    function getVoorman()
+    
+        baauthpSQLrec.AUUSERID = voorman;
+        call db2Service.getVoormanInfo(baauthpSQLrec, bausrinfArray)
+                returning to VoormanRetrieved onException fout;
+
+    end
+
+	function VoormanRetrieved(baauthpSQLrec baauthpSQLrec in, bausrinfArray bausrinfpSQLrec[] in, retResult string in)
+	    keuzemenu.planButton.disabled = false;
+        libraryVerloning.voormanNaam = baauthpSQLrec.AUOMS;
+        libraryVerloning.voormanNummer = baauthpSQLrec.AUnummer;
+        libraryVerloning.onderaannemer = baauthpSQLrec.AUTYPE;
+        
+        if(baauthpSQLrec.AUACTIEF == "N")
+            werkenMetWeekstatenBox.children =[keuzemenu.ui];
+        else
+            getWhatsNew();
+            werkenMetWeekstatenBox.children =[whatsnew.ui];
+        end
+        if(baauthpSQLrec.AUTYPE == "J") // onderaannemer
+        	keuzeMenu.onderaannemer();
+        end
+        if (bausrinfArray.getsize()!=0)
+        	for (i int from 1 to bausrinfArray.getsize())
+        		if (bausrinfArray[i].UISOORT=="LOGO" and bausrinfArray[i].UIWAARDE !="")
+                	image.src = "images/" + bausrinfArray[i].UIWAARDE;
+        		end
+        		if (bausrinfArray[i].UISOORT=="BACKGRND" and bausrinfArray[i].UIWAARDE !="")
+                	werkenMetWeekstatenUI.backgroundColor = bausrinfArray[i].UIWAARDE;
+        		end
+        		if (bausrinfArray[i].UISOORT=="MAINTEXT" and bausrinfArray[i].UIWAARDE !="")
+        			mainTextLabel.color=bausrinfArray[i].UIWAARDE;
+        		end
+        	end
+		end
+    end
+
+    //	======================================================================================================
+    // Instanziation
+    //======================================================================================================
+    
+    private function getSelBonnen() returns(selecteerBon)
+        if(this.selBonnen == null)
+            this.selBonnen = new selecteerBon{};
+        end
+        return(this.selBonnen);
+    end
+
+    private function getSelWeekstaat() returns(selectWeekNummer)
+        if(this.selWeekstaat == null)
+            this.selWeekstaat = new selectWeekNummer{};
+        end
+        return(this.selweekstaat);
+    end
+
+    private function getwrkWeekstaatMedew() returns(werkenMetUrenMedewerker)
+        if(this.wrkWeekstaatMedew == null)
+            this.wrkWeekstaatMedew = new werkenMetUrenMedewerker{};
+        end
+        return(this.wrkWeekstaatMedew);
+    end
+
+    private function getwrkWeekstaat() returns(werkenMetWeekstaat)
+        if(this.wrkWeekstaat == null)
+            this.wrkWeekstaat = new werkenMetWeekstaat{};
+        end
+        return(this.wrkWeekstaat);
+    end
+
+    private function getwrkBon() returns(werkenMetUrenPerBon)
+        if(this.wrkBon == null)
+            this.wrkBon = new werkenMetUrenPerBon{};
+        end
+        return(this.wrkBon);
+    end
+
+    private function getdetUren() returns(onderhoudDetailUren)
+        if(this.detUren == null)
+            this.detUren = new onderhoudDetailUren{};
+            deturen.detailWerkuren_IAMNAAM_comboBox.values = mdw;
+        end
+
+        return(this.detUren);
+    end
+
+    private function getLogon() returns(LogonWindow)
+        if(this.logon == null)
+            this.logon = new logonWindow{};
+
+        end
+
+        return(this.logon);
+    end
+
+    private function getdetBijzUren() returns(detailBijzondereUren)
+        if(this.detBijzondereUren == null)
+            this.detBijzondereUren = new detailBijzondereUren{};
+            detBijzondereUren.inbyzupfSQLrec_IBMDWID_field.values = Libraryverloning.EigenPloeg;
+        end
+
+        return(this.detBijzondereUren);
+    end
+
+    private function getTeken() returns(tekenenBonHandler)
+        if(this.tekenen == null)
+            this.tekenen = new tekenenBonHandler{};
+
+        end
+
+        return(this.tekenen);
+    end
+
+    private function getDspObject() returns(detailObject)
+        if(this.dspObject == null)
+            this.dspObject = new detailObject{};
+
+        end
+
+        return(this.dspObject);
+    end
+
+    private function getWrkPosten() returns(werkenMetPosten)
+        if(this.wrkPosten == null)
+            this.wrkPosten = new werkenMetPosten{};
+
+        end
+
+        return(this.wrkPosten);
+    end
+
+    private function getWrkMatHandler() returns(werkenMetMaterialenHandler)
+        if(this.wrkMatHandler == null)
+            this.wrkMatHandler = new werkenMetMaterialenHandler{};
+
+        end
+
+        return(this.wrkMatHandler);
+    end
+
+    private function getToonRie() returns(showRie)
+        if(this.showRie == null)
+            this.showRie = new showRie{};
+
+        end
+
+        return(this.showRie);
+    end
+
+    private function getPlanning() returns(voormanPlanning)
+        if(this.voormanPlan == null)
+            this.voormanPlan = new voormanPlanning{};
+
+        end
+
+        return(this.voormanPlan);
+    end
+
+    private function getToonPlanning() returns(toonPlanning)
+        if(this.toonPlan == null)
+            this.toonPlan = new toonPlanning{};
+
+        end
+
+        return(this.toonPlan);
+    end
+
+    private function getWhatsNew() returns(whatsNew)
+        if(this.whatsNew == null)
+            this.whatsNew = new whatsNew{};
+
+        end
+
+        return(this.whatsNew);
+    end
+ 	private function getploegCapaciteit() returns(ploegCapaciteit)
+        if(this.ploegCapaciteit == null)
+            this.ploegCapaciteit = new ploegCapaciteit{};
+
+        end
+
+        return(this.ploegCapaciteit);
+    end
+end
+ 

@@ -1,0 +1,1300 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.mvc.Controller;
+import com.ibm.egl.rui.mvc.FormField;
+import com.ibm.egl.rui.mvc.FormManager;
+import com.ibm.egl.rui.mvc.MVC;
+import com.ibm.egl.rui.widgets.CheckBox;
+import com.ibm.egl.rui.widgets.Combo;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.GridLayoutLib;
+import com.ibm.egl.rui.widgets.HyperLink;
+import com.ibm.egl.rui.widgets.TextField;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inamdwpfSQLrec;
+import dataVerloning.inbnurpfSQLrec;
+import dataVerloning.searchInbnurpf;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoLib;
+import dojo.widgets.DojoTextField;
+import dojo.widgets.DojoTimeTextBox;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+import services.werkServices;
+
+//
+//
+
+handler onderhoudDetailUren type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "onderhoudDetailUren"}
+
+    ui GridLayout{columns = 3, rows = 5, cellPadding = 4, children =[HelpLink, detailWerkuren_ui, buttonGrid,
+                    infotextLabel, weekFoutTextLabel,objectGrid]};
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    werkService werkServices{@DedicatedService};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 5, column = 2}, cellPadding = 4, rows = 1, columns = 6, children =[
+                    newButton, msgTextLabel, SaveButton, delButton,
+                    backtoBonButton, backButton]};
+
+    urenInfoGrid gridlayout{layoutData = new GridLayoutData{row = 1, column = 2}, rows = 2, columns = 6, children =[
+                    PlanLabel, AccoordLabel, NietAccoordLabel, PlanVeld,
+                    AccoordVeld, NietAccoordVeld
+            ], borderColor = "Black", borderStyle = "solid", borderTopStyle = "solid", borderLeftStyle = "solid"
+
+    };
+    PlanLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold", text = "Gepland"};
+    AccoordLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, fontWeight = "bold", text = "Akkoord"};
+    NietAccoordLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, fontWeight = "bold", text = "Niet-akkoord"};
+    PlanVeld TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}};
+    AccoordVeld TextLabel{layoutData = new GridLayoutData{row = 1, column = 4}};
+    NietAccoordVeld TextLabel{layoutData = new GridLayoutData{row = 1, column = 6}};
+    RestLabelIncl TextLabel{layoutData = new GridLayoutData{row = 2, column = 1}, fontWeight = "bold", text = "Rest incl. Niet-akkoord"};
+    TestLableExcl TextLabel{layoutData = new GridLayoutData{row = 2, column = 3}, fontWeight = "bold", text = "Rest Akkoord"};
+    RestVeldIncl TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}};
+    restVeldExcl TextLabel{layoutData = new GridLayoutData{row = 2, column = 4}};
+
+    medewerker int;
+    weeknummer int;
+    Actweeknummer int;
+
+    Volgnummer int;
+    fout string;
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 6}, color = "yellow", fontWeight = "bold", fontsize = "20"};
+    searchInbnurpf searchInbnurpf;
+    urenAddrec inbnurpfSQLrec;
+    urenPerMedeWerker inbnurpfSQLrec[0];
+
+    newButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/add.png' border=0  width=60 height=60   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= newButton_onClick, width = "80", height = "70"};
+    delButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/del.png' border=0  width=60 height=60  style='cursor: hand;'  title='Verwijderen'> ", onClick ::= delButton_onClick, width = "80", height = "70"};
+    SaveButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/upd.png' border=0   width=60 height=60   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= SaveButton_onClick, width = "80", height = "70"};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 5}, text = "<img src='images/terug.jpg' border=0   width=60 height=60    style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick, width = "80", height = "70"};
+    backtoBonButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/terug.jpg' border=0   width=60 height=60   style='cursor: hand;'  title='Terug'> ", onClick ::= backtoBonButton_onClick, width = "80", height = "70"};
+
+    detailWerkuren inbnurpfSQLrec;
+
+    detailWerkuren_ui GridLayout{layoutData = new GridLayoutData{row = 4, column = 2}, rows = 8, columns = 2, cellPadding = 4, children =[
+                    detailWerkuren_IUDAG_comboBox, naamGrid, urenGrid, verlonenGrid, detailWerkuren_IUBONNR_nameLabel,
+                    detailWerkuren_IUBONNR_field, bongrid,
+                    detailWerkuren_IAMNAAM_nameLabel,
+                    detailWerkuren_IUWEEKNR_nameLabel,
+                    detailWerkuren_IUWEEKNR_field,
+                    detailWerkuren_IUGWKUREN_nameLabel,
+
+                    detailWerkuren_IUDAG_nameLabel,
+                    detailWerkuren_IUVAN_nameLabel,
+                    detailWerkuren_IUSOORT_nameLabel,
+                    detailWerkuren_IUSOORT_field,
+                    detailWerkuren_IUURAKK_nameLabel,
+                    detailWerkuren_IUURAKK_field], fontSize = "24"};
+
+    detailWerkuren_IUBONNR_nameLabel TextLabel{text = "Bonnummer", layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold"};
+    detailWerkuren_IUBONNR_field TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}};
+
+    detailWerkuren_IAMNAAM_nameLabel TextLabel{text = "Naam", layoutData = new GridLayoutData{row = 2, column = 1}, fontWeight = "bold"};
+    detailWerkuren_IAMNAAM_comboBox Combo{layoutData = new GridLayoutData{row = 1, column = 1}, onChange ::= detailWerkuren_IAMNAAM_comboBox_onChange, width = "300", height = "40", fontSize = "24"};
+
+    detailWerkuren_IUWEEKNR_nameLabel TextLabel{text = "Weeknummer", layoutData = new GridLayoutData{row = 3, column = 1}, fontWeight = "bold"};
+    detailWerkuren_IUWEEKNR_field DojoTextField{layoutData = new GridLayoutData{row = 3, column = 2}, maxlength = 6, width = "120", onChange ::= detailWerkuren_IUWEEKNR_field_onChange, height = "40"};
+
+    detailWerkuren_IUVAN_nameLabel TextLabel{text = "Factuur uren", layoutData = new GridLayoutData{row = 5, column = 1}, fontWeight = "bold"};
+    detailWerkuren_IUVAN_textBox DojoTimeTextBox{value = detailWerkuren.IUVAN, timePattern = DojoLib.TIMEBOX_FORMAT_24HR, visibleIncrement = DojoLib.TIMEBOX_ONE_QUARTER, visibleRange = DojoLib.TIMEBOX_THREE_HOURS};
+    detailWerkuren_IUVAN_Uren_textBox DojoTextField{layoutData = new GridLayoutData{row = 1, column = 2}, onChange ::= bijwerkenVan, width = 50, height = "40", fontSize = "24", inputRequired = false, maxLength = 2};
+    detailWerkuren_IUVAN_Min_textBox DojoTextField{layoutData = new GridLayoutData{row = 1, column = 3}, onChange ::= bijwerkenVan, width = 50, height = "40", fontSize = "24", maxLength = 2};
+
+    detailWerkuren_IUTOT_nameLabel TextLabel{text = "Tot", layoutData = new GridLayoutData{row = 1, column = 4}, fontWeight = "bold"};
+    detailWerkuren_IUTOT_textBox DojoTimeTextBox{value = detailWerkuren.IUTOT, timePattern = DojoLib.TIMEBOX_FORMAT_24HR, visibleIncrement = DojoLib.TIMEBOX_ONE_QUARTER, visibleRange = DojoLib.TIMEBOX_THREE_HOURS, textCase = DojoLib.UPPER_CASE};
+    detailWerkuren_IUTOT_Uren_textBox DojoTextField{layoutData = new GridLayoutData{row = 1, column = 5}, onChange ::= bijwerkenTot, width = 50, height = "40", fontSize = "24", inputRequired = false, maxLength = 2};
+    detailWerkuren_IUTOT_Min_textBox DojoTextField{layoutData = new GridLayoutData{row = 1, column = 6}, onChange ::= bijwerkenTot, width = 50, height = "40", fontSize = "24", maxLength = 2};
+    detailWerkuren_IUSOORT_nameLabel TextLabel{text = "Soort", layoutData = new GridLayoutData{row = 7, column = 1}, fontWeight = "bold"};
+    detailWerkuren_IUSOORT_field Combo{layoutData = new GridLayoutData{row = 7, column = 2}, values =[
+                    "Werk", "Reis onder werktijd", "Reis buiten werktijd"
+            ], height = "40", width = "300", fontSize = "24"};
+
+    detailWerkuren_IUURAKK_nameLabel TextLabel{text = "Akkoord", layoutData = new GridLayoutData{row = 8, column = 1}, visible = false};
+    detailWerkuren_IUURAKK_field Checkbox{layoutData = new GridLayoutData{row = 8, column = 2}, visible = false};
+
+    detailWerkuren_IUBONNR_controller Controller{@MVC{model = detailWerkuren.IUBONNR, view = detailWerkuren_IUBONNR_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUBONNR_formField FormField{controller = detailWerkuren_IUBONNR_controller, nameLabel = detailWerkuren_IUBONNR_nameLabel};
+
+    detailWerkuren_IUVOLGNR_nameLabel TextLabel{text = "IUVOLGNR", layoutData = new GridLayoutData{row = 2, column = 1}};
+    detailWerkuren_IUVOLGNR_field DojoTextField{layoutData = new GridLayoutData{row = 2, column = 2}};
+    detailWerkuren_IUVOLGNR_controller Controller{@MVC{model = detailWerkuren.IUVOLGNR, view = detailWerkuren_IUVOLGNR_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUVOLGNR_formField FormField{controller = detailWerkuren_IUVOLGNR_controller, nameLabel = detailWerkuren_IUVOLGNR_nameLabel};
+
+    detailWerkuren_IUMDWID_nameLabel TextLabel{text = "IUMDWID", layoutData = new GridLayoutData{row = 3, column = 1}};
+    detailWerkuren_IUMDWID_field DojoTextField{layoutData = new GridLayoutData{row = 3, column = 2}};
+    detailWerkuren_IUMDWID_controller Controller{@MVC{model = detailWerkuren.IUMDWID, view = detailWerkuren_IUMDWID_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUMDWID_formField FormField{controller = detailWerkuren_IUMDWID_controller, nameLabel = detailWerkuren_IUMDWID_nameLabel};
+
+    detailWerkuren_IUGWKUREN_nameLabel TextLabel{text = "Te verlonen uren", layoutData = new GridLayoutData{row = 6, column = 1}, fontSize = "24", fontWeight = "bold"};
+    detailWerkuren_IUGWKUREN_field DojoTextField{layoutData = new GridLayoutData{row = 1, column = 1}, width = "60", onChange ::= detailWerkuren_IUGWKUREN_field_onChange, height = "40", fontSize = "24"};
+
+    detailWerkuren_IAMNAAM_controller Controller{@MVC{model = detailWerkuren.IAMNAAM, view = detailWerkuren_IAMNAAM_comboBox as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IAMNAAM_formField FormField{controller = detailWerkuren_IAMNAAM_controller, nameLabel = detailWerkuren_IAMNAAM_nameLabel};
+
+    detailWerkuren_IUWEEKNR_controller Controller{@MVC{model = detailWerkuren.IUWEEKNR, view = detailWerkuren_IUWEEKNR_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUWEEKNR_formField FormField{controller = detailWerkuren_IUWEEKNR_controller, nameLabel = detailWerkuren_IUWEEKNR_nameLabel};
+
+    detailWerkuren_IUDAG_nameLabel TextLabel{text = "Dag", layoutData = new GridLayoutData{row = 4, column = 1}, fontWeight = "bolder"};
+    detailWerkuren_IUDAG_comboBox Combo{values =["Maak een keuze", "Maandag", "Dinsdag", "Woensdag", "Donderdag",
+                    "Vrijdag", "Zaterdag",
+                    "Zondag"
+
+            ], layoutData = new GridLayoutData{row = 4, column = 2}, onChange ::= detailWerkuren_IUDAG_comboBox_onChange, width = "300", height = "40", fontSize = "24"};
+    detailWerkuren_IUDAG_controller Controller{@MVC{model = detailWerkuren.IUDAG, view = detailWerkuren_IUDAG_comboBox as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUDAG_formField FormField{controller = detailWerkuren_IUDAG_controller, nameLabel = detailWerkuren_IUDAG_nameLabel};
+
+    detailWerkuren_IUVAN_controller Controller{@MVC{model = detailWerkuren.IUVAN, view = detailWerkuren_IUVAN_textBox as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUVAN_formField FormField{controller = detailWerkuren_IUVAN_controller, nameLabel = detailWerkuren_IUVAN_nameLabel};
+
+    detailWerkuren_IUTOT_controller Controller{@MVC{model = detailWerkuren.IUTOT, view = detailWerkuren_IUTOT_textBox as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUTOT_formField FormField{controller = detailWerkuren_IUTOT_controller, nameLabel = detailWerkuren_IUTOT_nameLabel};
+
+    detailWerkuren_IUSOORT_controller Controller{@MVC{model = detailWerkuren.IUSOORT, view = detailWerkuren_IUSOORT_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUSOORT_formField FormField{controller = detailWerkuren_IUSOORT_controller, nameLabel = detailWerkuren_IUSOORT_nameLabel};
+
+    detailWerkuren_IUURAKK_controller Controller{@MVC{model = detailWerkuren.IUURAKK, view = detailWerkuren_IUURAKK_field as
+                            Widget}, validStateSetter = handleValidStateChange_detailWerkuren};
+    detailWerkuren_IUURAKK_formField FormField{controller = detailWerkuren_IUURAKK_controller, nameLabel = detailWerkuren_IUURAKK_nameLabel};
+
+    detailWerkuren_form FormManager{entries =[detailWerkuren_IUBONNR_formField,
+                    detailWerkuren_IUVOLGNR_formField,
+                    detailWerkuren_IUMDWID_formField,
+
+                    detailWerkuren_IAMNAAM_formField,
+                    detailWerkuren_IUWEEKNR_formField,
+                    detailWerkuren_IUDAG_formField,
+                    // detailWerkuren_IUVAN_formField,
+                    //detailWerkuren_IUTOT_formField,
+                    detailWerkuren_IUSOORT_formField,
+                    detailWerkuren_IUURAKK_formField]};
+    urenGrid GridLayout{layoutData = new GridLayoutData{row = 5, column = 2}, cellPadding = 4, rows = 1, columns = 7, children =[
+
+                    NachtTextLabel, detailWerkuren_IUTOT_nameLabel,
+                    detailWerkuren_IUVAN_Uren_textBox,
+                    detailWerkuren_IUVAN_Min_textBox, vanTextLabel,
+                    detailWerkuren_IUTOT_Uren_textBox,
+                    detailWerkuren_IUTOT_Min_textBox]};
+    vanTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Van", fontWeight = "bold"};
+    weeknr int;
+    urenOK boolean;
+    soortChk string;
+    soortBon string;
+    actie string;
+    StartTimeTextBox DojoTimeTextBox{timePattern = DojoLib.TIMEBOX_FORMAT_24HR, visibleIncrement = DojoLib.TIMEBOX_ONE_QUARTER, visibleRange = DojoLib.TIMEBOX_THREE_HOURS};
+    StartTimeUrenTextBox DojotextField{layoutData = new GridLayoutData{row = 1, column = 3}, width = 50, maxLength = 2, onChange ::= bijwerkenStart, height = "40", fontSize = "24"};
+    StartTimeMinTextBox DojotextField{layoutData = new GridLayoutData{row = 1, column = 4}, width = 50, height = "40", fontSize = "24", maxLength = 2, onChange ::= bijwerkenStart};
+    startTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Van", fontWeight = "bold"};
+    verlonenGrid GridLayout{layoutData = new GridLayoutData{row = 6, column = 2}, cellPadding = 4, rows = 1, columns = 6, children =[
+                    totTextLabel, totTijdTextLabel,
+                    detailWerkuren_IUGWKUREN_field, StartTimeUrenTextBox,
+                    StartTimeMinTextBox, startTextLabel]};
+    totTijdTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, text = "Tot", fontSize = "24", fontWeight = "bold"};
+    totTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 6}};
+    aantalFactuurTextField DojoTextField{layoutData = new GridLayoutData{row = 1, column = 1}, width = "60"};
+    infoTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Werken met uren per bon.", fontWeight = "bold", fontSize = "26"};
+    urenplan decimal(9, 2);
+    urenrealAcc decimal(9, 2);
+    urenrealNietAcc decimal(9, 2);
+    vanTijd time;
+    weekFoutTextLabel TextLabel{layoutData = new GridLayoutData{row = 3, column = 2}, color = "red", fontWeight = "bold"};
+    objectGrid GridLayout{layoutData = new GridLayoutData{row = 2, column = 2}, cellPadding = 4, rows = 1, columns = 2};
+    objectTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold"};
+    urenTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, fontWeight = "bold"};
+    voorman string;
+    NachtTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 7}, text = "(Middernacht = 24:00)", fontSize = "12", fontWeight = "bold"};
+    object string;
+
+    bonGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 4, children =[
+                    vrijUuurTextLabel, vrijeUurButton,
+                    detailWerkuren_IUBONNR_field]};
+    vrijeUurButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/vrijeUur.png' border=0  width=45 height=45   style='cursor: hand;'  title='Bepaal eerstvolgende vrije uur'> ", onClick ::= bepaalVrijeUur_onClick};
+    vrijUuurTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 4}, fontWeight = "bold", text = "Bepaal eerstvolgende vrije uur", fontSize = "12"};
+	medewerkersArray inamdwpfSQLrec[];
+	selectedrecord inamdwpfSQLrec;
+    bonnummer int;
+    urenGewerktAcc decimal(9, 2);
+    urenGewerktNietAcc decimal(9, 2);
+    urenGepland decimal(9, 2);
+    planuren decimal(7, 2);
+    tekst string;
+    medewerkersArray_ui DataGrid { layoutData = new GridLayoutData{ row = 1, column = 1,
+    	horizontalSpan = 2 },
+		columns = [
+			new DataGridColumn {name = "IAMNAAM", displayName = "Naam", width =200}
+		], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ],
+		data = medewerkersArray as any[]};
+    medewerkersGrid GridLayout{ layoutData = new GridLayoutData{ row = 4, column = 3,
+    	verticalAlignment = GridLayoutLib.VALIGN_TOP }, cellPadding = 4, rows = 2, columns = 2,
+    	children = [ sluitButton, SelectButton, medewerkersArray_ui ] };
+    naamGrid GridLayout{ layoutData = new GridLayoutData{ row = 2, column = 2 }, cellPadding = 4, rows = 1, columns = 3,
+    	children = [ ZoekButton, zoekTextField, detailWerkuren_IAMNAAM_comboBox ] };
+    zoekTextField TextField{ layoutData = new GridLayoutData{ row = 1, column = 2 },
+    	height = "40", fontSize = "24"};
+    ZoekButton DojoButton{ layoutData = new GridLayoutData{ row = 1, column = 3 }, text = "Zoek", onClick ::= zoekButton_onClick };
+    SelectButton DojoButton{ layoutData = new GridLayoutData{ row = 2, column = 1 }, text = "Selecteer" , onClick ::= selecteerButton_onClick };
+    sluitButton DojoButton{ layoutData = new GridLayoutData{ row = 2, column = 2 }, text = "Sluiten" , onClick ::= sluitButton_onClick };
+    
+    HelpLink HyperLink{layoutData = new GridLayoutData{row = 3, column = 3}, text = "<img title='Help'  style='cursor: hand;' src='images/help.png' width=55, height=55>", href = "documenten/UrenHelp.pdf", target = "_blank"};
+   
+	
+
+    function start()
+//	initrui();
+//                            soortbon = "E";
+//                            detailwerkuren.IUBONNR = 490132;
+//                            detailwerkuren.IUVOLGNR=34;
+//                            detailwerkuren.IUWeeknr=201513;
+//                            detailwerkuren.IUMDWID=201170;
+//                             getData();
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+        disableUI();
+
+        call db2Service.getUrenDetail(detailwerkuren)
+                returning to urenretrieved1;
+    end
+
+    function urenretrieved1(inbnurpfSQLRec inbnurpfSQLrec in, retResult string in)
+
+        msgTextLabel.text = retresult;
+        detailwerkuren = inbnurpfSQLRec;
+        detailWerkuren_form.publish();
+        weeknr = inbnurpfSQLRec.IUWEEKNR;
+        case(inbnurpfSQLRec.IUSOORT)
+            when("W")
+                detailWerkuren_IUSOORT_field.selection = 1; //"Werk";
+            when("O")
+                detailWerkuren_IUSOORT_field.selection = 2; // "Reis onder werktijd";
+            when("B")
+                detailWerkuren_IUSOORT_field.selection = 3; // "Reis buiten werktijd";
+        end
+        detailWerkuren_IAMNAAM_comboBox.selection = libraryVerloning.zoekMdwNaam(inbnurpfSQLRec.IUMDWID);
+
+        detailWerkuren_IUGWKUREN_field.text = ruiFunctions.numberReturnComma(inbnurpfSQLRec.IUGWKUREN as string);
+
+        StartTimeTextBox.value = inbnurpfSQLRec.IUVAN;
+        detailWerkuren_IUVAN_textBox.value = inbnurpfSQLRec.IUVAN;
+        detailWerkuren_IUTOT_textBox.value = inbnurpfSQLRec.IUTOT;
+
+        StartTimeUrenTextBox.text = libraryVerloning.omzettenUren(inbnurpfSQLRec.IUVAN);
+        StartTimeMinTextBox.text = libraryVerloning.omzettenMinuten(inbnurpfSQLRec.IUVAN);
+
+        detailWerkuren_IUVAN_Uren_textBox.text = libraryVerloning.omzettenUren(inbnurpfSQLRec.IUVAN);
+        detailWerkuren_IUVAN_Min_textBox.text = libraryVerloning.omzettenMinuten(inbnurpfSQLRec.IUVAN);
+        detailWerkuren_IUToT_Uren_textBox.text = libraryVerloning.omzettenUren(inbnurpfSQLRec.IUTOT);
+        detailWerkuren_IUTOT_Min_textBox.text = libraryVerloning.omzettenMinuten(inbnurpfSQLRec.IUTOT);
+        if(detailWerkuren_IUTOT_Min_textBox.text == "59")
+            detailWerkuren_IUToT_Uren_textBox.text = "24";
+            detailWerkuren_IUTOT_Min_textBox.text = "00";
+
+        end
+        
+        call werkService.bepaal(StartTimeTextBox.value as time,
+                detailWerkuren_IUGWKUREN_field.text)
+
+                returning to TotBepaald2
+                onException serviceLib.serviceExceptionHandler;
+
+        if(actie == "delete")
+            newButton.disabled = true;
+            SaveButton.disabled = true;
+            delButton.disabled = false;
+            newbutton.text = libraryVerloning.ADD_DIS_BUTTON;
+            savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+            delbutton.text = libraryVerloning.DEL_BUTTON;
+
+            disableUI();
+        else
+        	
+            if(inbnurpfSQLRec.IUURAKK == "J")
+
+                newButton.disabled = true;
+                SaveButton.disabled = true;
+                delButton.disabled = true;
+                newbutton.text = libraryVerloning.ADD_DIS_BUTTON;
+                savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+                delbutton.text = libraryVerloning.DEL_DIS_BUTTON;
+                disableUI();
+
+            else
+                enableUI();
+              
+                searchInbnurpf.IUMDWID = inbnurpfSQLRec.IUMDWID;
+                searchInbnurpf.IUWEEKNR = inbnurpfSQLRec.IUWEEKNR;
+
+                call db2Service.getUrenMedewerker(searchInbnurpf,
+                        urenPerMedeWerker) returning to urenMedewerker
+                        onException serviceLib.serviceExceptionHandler;
+                newButton.disabled = false;
+                SaveButton.disabled = false;
+                delButton.disabled = false;
+                newbutton.text = libraryVerloning.ADD_BUTTON;
+                savebutton.text = libraryVerloning.UPD_BUTTON;
+                delbutton.text = libraryVerloning.DEL_BUTTON;
+                detailWerkuren_ui.disabled = false;
+            end
+
+        end
+        case(inbnurpfSQLRec.IUDAG)
+
+            when("zo")
+                detailWerkuren_IUDAG_comboBox.selection = 8; // "Zondag";
+            when("ma")
+                detailWerkuren_IUDAG_comboBox.selection = 2; //"Maandag";
+            when("di")
+                detailWerkuren_IUDAG_comboBox.selection = 3; //"Dinsdag";
+            when("wo")
+                detailWerkuren_IUDAG_comboBox.selection = 4; //"Dinsdag";
+            when("do")
+                detailWerkuren_IUDAG_comboBox.selection = 5; // "Donderdag";
+            when("vr")
+                detailWerkuren_IUDAG_comboBox.selection = 6; // "Vrijdag";
+            when("za")
+                detailWerkuren_IUDAG_comboBox.selection = 7; //"Zaterdag";
+        
+        end
+        if(soortbon == "C")
+            call db2Service.getUrenTotaalperBon(detailWerkuren.IUBONNR,
+                    urenPlan, urenRealAcc, UrenRealNietAcc)
+                    returning to urenTotaal
+                    onException serviceLib.serviceExceptionHandler;
+        end
+		  bepaalStartButton();
+    end
+
+    function urenTotaal(urenPlan decimal(9, 2) in, urenRealAcc decimal(9, 2) in, urenRealNietAcc decimal(9, 2) in, retResult string in)
+
+        PlanVeld.text = ruiFunctions.numberReturnComma(urenplan) as string;
+        AccoordVeld.text = ruiFunctions.numberReturnComma(urenrealAcc);
+        NietAccoordVeld.text = ruiFunctions.numberReturnComma(urenrealNietAcc);
+        RestVeldIncl.text = ruiFunctions.numberReturnComma(urenplan -
+                        urenrealAcc - urenrealNietAcc);
+        restVeldExcl.text = ruiFunctions.numberReturnComma(urenplan -
+                        urenrealAcc);
+        if(urenplan - urenrealAcc - urenrealNietAcc < 0)
+            weekFoutTextLabel.text = "Meer uren besteed als gepland!";
+        end
+
+    end
+
+    function TotBepaald2(retResult time in)
+        loontekst string;
+
+        if(Retresult == "00:00:00")
+
+            Retresult = "23:59:00";
+            loontekst = "24:00";
+        else
+            loontekst = retresult as string;
+        end
+
+        totTextLabel.text = loontekst[1 : 5];
+
+        if(soortbon == "C")
+            detailWerkuren_IUTOT_textBox.value = retresult;
+            detailWerkuren.IUTOT = retresult;
+        end
+    end
+
+    function backButton_onClick(event Event in)
+        ui.removeChild(medewerkersGrid);
+		zoekTextField.text="";
+        infobus.publish("WEEKSTAAT_MEDEW", "");
+        
+    end
+
+    function backtoBonButton_onClick(event Event in)
+        ui.removeChild(medewerkersGrid);
+		zoekTextField.text="";
+		infobus.publish("WRK_BON", "");
+    end
+
+    function newButton_onClick(event Event in)
+    //    if(detailWerkuren_form.isValid())
+        ophalenUrenMedewerker();
+        // detailWerkuren_form.commit();
+        addRecord();
+        //   end
+    end
+
+    function SaveButton_onClick(event Event in)
+
+    //   if(detailWerkuren_form.isValid())
+    //      detailWerkuren_form.commit();
+        updRecord();
+        //   end
+        
+    end
+
+    function checkForm(soort string in)
+        fout = "";
+
+        weekFoutTextLabel.text = "";
+        soortChk = soort;
+        msgTextLabel.text = "";
+        if(detailWerkuren_IUGWKUREN_field.text == "")
+            detailWerkuren_IUGWKUREN_field.text = "0";
+
+        end
+        decimalIndex int = strlib.indexOf(detailWerkuren_IUGWKUREN_field.text,
+                        ",");
+
+        if(decimalindex == 0)
+            detailWerkuren_IUGWKUREN_field.text = detailWerkuren_IUGWKUREN_field.text +
+                    ",00";
+        else
+
+            checkFormat string = ruiFunctions.checkKwartier(detailWerkuren_IUGWKUREN_field.text);
+            if(checkFormat == "Fout")
+                msgTextLabel.text = "Alleen kwartieren (00, 25, 50 ,75) zijn toegestaan";
+            end
+        end
+        if(detailWerkuren_IUTOT_Uren_textBox.text as int == 24 and
+                detailWerkuren_IUTOT_Min_textBox.text != "00")
+            msgTextLabel.text = "Ongeldige minuten. Bij 24 alleen 00 toegestaan";
+        end
+
+        if(detailWerkuren_IUWEEKNR_field.text == "")
+            msgTextLabel.text = "Geef weeknummer op";
+        end
+
+        if(strlib.characterLen(detailWerkuren_IUWEEKNR_field.text) < 6 or
+                detailWerkuren_IUWEEKNR_field.text == "")
+            msgTextLabel.text = "Geef geldig weeknummer op JJJJWW";
+        else
+            detailWerkuren.IUWEEKNR = detailWerkuren_IUWEEKNR_field.text as int;
+        end
+        actweek string = actweeknummer as string;
+        try
+            if(detailWerkuren_IUWEEKNR_field.text[5 : 6] as int <
+                    actweek[5 : 6] as int - 3 and detailWerkuren_IUWEEKNR_field.text[5 : 6] as int == datetimelib.yearOf(currenttimestamp())); 
+                weekFoutTextLabel.text = "Meer als 2 weken geleden. Neem contact op met projectmanager";
+            end
+        onException(exception AnyException)
+        end
+
+        if(detailWerkuren_IUDAG_comboBox.selection == 1)
+            msgTextLabel.text = "Selecteer dag";
+        end
+        if(detailWerkuren_IUSOORT_field.selection == 0)
+            msgTextLabel.text = "Selecteer soort";
+        end
+        if(detailWerkuren_IAMNAAM_comboBox.selection == 1)
+            msgTextLabel.text = "Selecteer naam";
+        end
+        //verloningFuncties.verschillMinuten(detailWerkuren_IUVAN_textBox.value as time, detailWerkuren_IUTOT_textBox.value as time);
+        // niet meer werkuren dan factuur uren.
+        
+        detailWerkuren.IUMDWID = libraryVerloning.zoekMdwNummer(detailWerkuren_IAMNAAM_comboBox.selection);
+
+        detailWerkuren.IUGWKUREN = ruiFunctions.numberPoint(detailWerkuren_IUGWKUREN_field.text);
+
+        MinutenVan int = detailWerkuren_IUVAN_Min_textBox.text as int;
+        UrenVan int = detailWerkuren_IUVAN_Uren_textBox.text as int;
+        MinutenTot int = detailWerkuren_IUTOT_Min_textBox.text as int;
+        UrenTot int = detailWerkuren_IUTOT_Uren_textBox.text as int;
+        LoonMinuten int = detailWerkuren.IUGWKUREN * 60;
+        factMinuten int =((Urentot - UrenVan) * 60) +(MinutenTot - MinutenVan);
+
+        if(soortbon == "E")
+
+            if((urenvan * 60) + minutenvan >=(urentot * 60) + minutentot)
+                ;
+                msgTextLabel.text = "'Tot tijd' moet groter zijn als 'Van tijd'";
+            else
+                StartTimeTextBox.disabled = true;
+                StartTimeMinTextBox.disabled = true;
+                StartTimeUrenTextBox.disabled = true;
+
+                decimalIndex = strlib.indexOf(aantalFactuurTextField.text,
+                        ",");
+                if(loonMinuten > factMinuten)
+
+                    msgTextLabel.text = "Meer uren verloond dan gefactureerd";
+                end
+            end
+
+            if(msgTextLabel.text == "")
+                urenOK = false;
+                detailWerkuren_ui.disabled = true;
+                // Bepaal overlappingen
+                // Bepaal verschil gewerkt<> verloond
+                // Bepaal tot tijd voor verloonde uren
+                totFact time;
+                totLoon time;
+
+                if(msgTextLabel.text == "")
+                    call werkService.bepaalTijden(detailWerkuren_IUVAN_textBox.value as time,
+                            detailWerkuren_IUTOT_textBox.value as time,
+                            detailWerkuren_IUGWKUREN_field.text, totLoon)
+                            returning to totBepaald1
+                            onException serviceLib.serviceExceptionHandler;
+                end
+            end
+        else
+            StartTimeTextBox.disabled = false;
+            StartTimeMinTextBox.disabled = false;
+            StartTimeUrenTextBox.disabled = false;
+
+            detailWerkuren_IUVAN_Min_textBox.text = StartTimeMinTextBox.text;
+            detailWerkuren_IUVAN_uren_textBox.text = StartTimeUrenTextBox.text;
+
+            //detailWerkuren_IUVAN_textBox.value = StartTimeTextBox.value;
+            if(msgTextLabel.text == "")
+                call werkService.bepaal(StartTimeTextBox.value as time,
+                        detailWerkuren_IUGWKUREN_field.text)
+
+                        returning to TotBepaald
+                        onException serviceLib.serviceExceptionHandler;
+            end
+        end
+        detailWerkuren_ui.disabled = false;
+        enableUI();
+    end
+
+    function TotBepaald(retResult time in)
+        loontekst string;
+        if(Retresult == "00:00:00")
+
+            Retresult = "23:59:00";
+            loontekst = "24:00";
+        else
+            loontekst = retresult as string;
+        end
+        totTextLabel.text = loontekst[1 : 5];
+        dag string;
+        case(detailWerkuren_IUDAG_comboBox.selection)
+
+            when(8)
+                dag = "zo";
+            when(2)
+                dag = "ma";
+            when(3)
+                dag = "di";
+            when(4)
+                dag = "wo";
+            when(5)
+                dag = "do";
+            when(6)
+                dag = "vr";
+            when(7)
+                dag = "za";
+
+        end
+
+        if(detailWerkuren_IUGWKUREN_field.text != "0,00")
+            msgTextLabel.text = checkOverlapping(soortChk,
+                    detailWerkuren_IUVAN_textBox.value as time, retresult,
+                    dag);
+        end
+
+        if(msgTextLabel.text == "")
+            if(soortbon == "C")
+                detailWerkuren_IUTOT_textBox.value = retresult;
+                detailWerkuren.IUTOT = retresult;
+            end
+            if(soortchk == "Add")
+
+                addOK();
+            else
+                updOK();
+            end
+
+        end
+        detailWerkuren_ui.disabled = false;
+        enableUI();
+    end
+
+    function totBepaald1(TotLoon time in, retResult string in)
+
+        loontekst string = totLoon as string;
+
+        if(totloon == "00:00:00")
+            loontekst = "24:00";
+        end
+        totTextLabel.text = loontekst[1 : 5];
+        detailWerkuren.IUTOT = totloon;
+        detailWerkuren_IUTOT_textBox.value = totloon;
+        dag string;
+        case(detailWerkuren_IUDAG_comboBox.selection)
+
+            when(8)
+                dag = "zo";
+            when(2)
+                dag = "ma";
+            when(3)
+                dag = "di";
+            when(4)
+                dag = "wo";
+            when(5)
+                dag = "do";
+            when(6)
+                dag = "vr";
+            when(7)
+                dag = "za";
+
+        end
+
+        if(detailWerkuren_IUGWKUREN_field.text != "0,00")
+            msgTextLabel.text = checkOverlapping(soortChk,
+                    detailWerkuren_IUVAN_textBox.value as time, totloon, dag);
+        end
+        //ASML
+        
+        if(voorman == "voorman")
+            bijwerkenTotTijd();
+            msgTextLabel.text = checkOverlapping(soortChk,
+                    detailWerkuren_IUVAN_textBox.value as time,
+                    detailWerkuren_IUTOT_textBox.value as time, dag);
+        end
+        if(msgTextLabel.text == "")
+
+            if(soortchk == "Add")
+
+                addOK();
+            else
+                updOK();
+            end
+
+        end
+        detailWerkuren_ui.disabled = false;
+    end
+
+    function checkOverlapping(soort string in, van time, tot time, dag string) returns(string)
+        overlap string = "";
+
+        for(i int from 1 to urenPerMedewerker.getSize())
+
+            // bij wijzigen niet op eigen regel controleren 
+            
+            if(urenPerMedeWerker[i].IUDAG == dag)
+
+                if(soort == "Upd" and urenPerMedeWerker[i].IUVOLGNR ==
+                                detailWerkuren.IUVOLGNR)
+                else
+                    if(van > urenPerMedeWerker[i].IUVAN and van <
+                                    urenPerMedeWerker[i].IUTOT)
+                        overlap = "Overlap uren met bon: " +
+                                urenPerMedeWerker[i].IUBONNR + " " +
+                                urenPerMedeWerker[i].IUDAG + " " +
+                                urenPerMedeWerker[i].IUVAN + " - " +
+                                urenPerMedeWerker[i].IUTOT;
+                    end
+                    if(tot < urenPerMedeWerker[i].IUTOT and tot >
+                                    urenPerMedeWerker[i].IUVAN)
+                        overlap = "Overlap uren met bon: " +
+                                urenPerMedeWerker[i].IUBONNR + " " +
+                                urenPerMedeWerker[i].IUDAG + " " +
+                                urenPerMedeWerker[i].IUVAN + " - " +
+                                urenPerMedeWerker[i].IUTOT;
+
+                    end
+                    if((van < urenPerMedeWerker[i].IUVAn and tot >
+                                    urenPerMedeWerker[i].IUTOT) and(
+                            urenPerMedeWerker[i].IUVAn <
+                                    urenPerMedeWerker[i].IUTOT))
+
+                        overlap = "Overlap uren met bon: " +
+                                urenPerMedeWerker[i].IUBONNR + " " +
+                                urenPerMedeWerker[i].IUDAG + " " +
+                                urenPerMedeWerker[i].IUVAN + " - " +
+                                urenPerMedeWerker[i].IUTOT;
+
+                    end
+                    if(van == urenPerMedeWerker[i].IUVAN or tot ==
+                                    urenPerMedeWerker[i].IUTOT)
+                        overlap = "Overlap uren met bon: " +
+                                urenPerMedeWerker[i].IUBONNR + " " +
+                                urenPerMedeWerker[i].IUDAG + " " +
+                                urenPerMedeWerker[i].IUVAN + " - " +
+                                urenPerMedeWerker[i].IUTOT;
+                    end
+                end
+
+            end
+        end
+
+        return(overlap);
+    end
+    //========================================================================================================================
+    // database functions
+    //========================================================================================================================
+    
+    function addRecord()
+        checkForm("Add");
+
+    end
+
+    function addOK()
+        detailWerkuren_ui.disabled = true;
+        msgTextLabel.text = "";
+        vultabel();
+
+        call db2Service.addUren(voorman, soortBon, detailWerkuren)
+                returning to recordadded
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+    function recordadded(voorman string in, soortbon string in, urenrec inbnurpfSQLrec in, retResult string in)
+
+        detailWerkuren_ui.disabled = false;
+
+        msgTextLabel.text = retResult;
+        urenPerMedeWerker.appendElement(urenrec);
+        newbutton.disabled = false;
+        newbutton.text = libraryVerloning.ADD_BUTTON;
+
+        if(soortbon == "C")
+            call db2Service.getUrenTotaalperBon(detailWerkuren.IUBONNR,
+                    urenPlan, urenRealAcc, UrenRealNietAcc)
+                    returning to urenTotaal
+                    onException serviceLib.serviceExceptionHandler;
+        end
+        bepaalStartButton();
+    end
+
+    function updRecord()
+        disableUI();
+        checkForm("Upd");
+
+    end
+
+    function updOK()
+        detailWerkuren_ui.disabled = true;
+        SAVEButton.disabled = true;
+
+        savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+        msgTextLabel.text = "";
+
+        vulTabel();
+
+        call db2Service.updDetailUren(soortbon, weeknr, detailWerkuren)
+                returning to recordUpdated
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+    function delRecord()
+
+        call db2Service.delUren(detailWerkuren) returning to recorddeleted
+                onException serviceLib.serviceExceptionHandler;
+
+    end
+
+    function recordUpdated(soortbon string in, inbnurpfSQLrec inbnurpfSQLrec in, retResult string in)
+
+        msgTextLabel.text = retResult;
+        detailWerkuren_ui.disabled = false;
+        SAVEButton.disabled = false;
+
+        savebutton.text = libraryVerloning.UPD_BUTTON;
+        if(soortbon == "C")
+            call db2Service.getUrenTotaalperBon(detailWerkuren.IUBONNR,
+                    urenPlan, urenRealAcc, UrenRealNietAcc)
+                    returning to urenTotaal
+                    onException serviceLib.serviceExceptionHandler;
+        end
+        bepaalStartButton();
+    end
+
+    function recordDeleted(retResult string in)
+        msgTextLabel.text = retResult;
+        if(soortbon == "C")
+            call db2Service.getUrenTotaalperBon(detailWerkuren.IUBONNR,
+                    urenPlan, urenRealAcc, UrenRealNietAcc)
+                    returning to urenTotaal
+                    onException serviceLib.serviceExceptionHandler;
+        end
+        detailWerkuren_ui.disabled = true;
+    end
+
+    function vultabel()
+
+        if(detailWerkuren_IUTOT_Uren_textBox.text == "24")
+            detailWerkuren_IUTOT_textBox.value = "23:59:00";
+        end
+        if(soortbon == "C")
+            detailWerkuren.IUTOT = detailWerkuren_IUTOT_textBox.value;
+            detailWerkuren.IUVAN = StartTimeTextBox.value;
+        else
+            bijwerkenstartTijd();
+            bijwerkentotTijd();
+
+        end
+
+        case(detailWerkuren_IUSOORT_field.selection)
+            when(1)
+            when(2)
+                detailWerkuren.IUSOORT = "O";
+            when(3)
+                detailWerkuren.IUSOORT = "B";
+        end
+        if(detailWerkuren_IUURAKK_field.selected == true)
+
+            detailWerkuren.IUURAKK = "J";
+        else
+            detailWerkuren.IUURAKK = "N";
+        end
+        index int = detailWerkuren_IAMNAAM_comboBox.selection;
+        detailWerkuren.IUMDWID = libraryVerloning.MedewerkersNummer[index];
+
+        case(detailWerkuren_IUDAG_comboBox.selection)
+
+            when(8)
+                detailWerkuren.IUdag = "zo";
+            when(2)
+                detailWerkuren.IUdag = "ma";
+            when(3)
+                detailWerkuren.IUdag = "di";
+            when(4)
+                detailWerkuren.IUdag = "wo";
+            when(5)
+                detailWerkuren.IUdag = "do";
+            when(6)
+                detailWerkuren.IUdag = "vr";
+            when(7)
+                detailWerkuren.IUdag = "za";
+
+        end
+        //  SysLib.writeStdout( "vultabel" + detailWerkuren.IUTOT);
+        
+    end
+
+    function detailWerkuren_form_Submit(event Event in)
+        if(detailWerkuren_form.isValid())
+            detailWerkuren_form.commit();
+        end
+    end
+
+    function detailWerkuren_form_Publish(event Event in)
+        detailWerkuren_form.publish();
+        detailWerkuren_form_Validate();
+    end
+
+    function detailWerkuren_form_Validate()
+        detailWerkuren_form.isValid();
+    end
+
+    function handleValidStateChange_detailWerkuren(view Widget in, valid boolean in)
+        for(n int from detailWerkuren_form.entries.getSize() to 1 decrement by 1)
+            entry FormField = detailWerkuren_form.entries[n];
+            if(entry.controller.view == view)
+                if(valid)
+                // TODO: handle valid value
+                else
+                    msg string? = entry.controller.getErrorMessage();
+                // TODO: handle invalid value
+                end
+            end
+        end
+    end
+
+    function detailWerkuren_IUGWKUREN_field_onChange(event Event in)
+
+    end
+
+    function detailWerkuren_IAMNAAM_comboBox_onChange(event Event in)
+        ophalenUrenMedewerker();
+        bepaalStartButton();
+        msgTextLabel.text = "";
+
+    end
+
+    function ophalenUrenMedewerker()
+
+        detailWerkuren_form.commit();
+
+        //  detailWerkuren_IAMNAAM_comboBox.disabled = true;
+        
+        index int = detailWerkuren_IAMNAAM_comboBox.selection;
+        searchInbnurpf.IUMDWID = libraryVerloning.MedewerkersNummer[index];
+
+        medewerker = searchInbnurpf.IUMDWID;
+        if(detailWerkuren_IUWEEKNR_field.text != "")
+            weeknummer = detailWerkuren_IUWEEKNR_field.text as int;
+            searchInbnurpf.IUWEEKNR = weeknummer;
+
+            call db2Service.getUrenMedewerker(searchInbnurpf,
+                    urenPerMedeWerker) returning to urenMedewerker
+                    onException serviceLib.serviceExceptionHandler;
+
+        end
+
+    end
+
+    function urenMedewerker(urenArray inbnurpfSQLrec[] in, retResult string in)
+
+        urenPerMedewerker = urenarray as inbnurpfSQLrec[];
+
+    end
+
+    private function delButton_onClick(e Event in)
+        delRecord();
+    end
+
+    function initRUI()
+        msgTextLabel.text = "";
+        totTextLabel.text = "";
+        weekFoutTextLabel.text = " ";
+        detailWerkuren.IUVAN = "07.00.00";
+        detailWerkuren_IUVAN_Uren_textBox.text = "07";
+        detailWerkuren_IUVAN_Min_textBox.text = "00";
+        detailWerkuren_IUTOT_Uren_textBox.text = "15";
+        detailWerkuren_IUTOT_Min_textBox.text = "00";
+        detailWerkuren.IUTOT = "15.00.00";
+        detailWerkuren_IUVAN_textBox.value = "07.00.00";
+        detailWerkuren_IUTOT_textBox.value = "15.00.00";
+        detailWerkuren_IUDAG_comboBox.selection = 1;
+
+        detailWerkuren_IUGWKUREN_field.text = "";
+        //detailWerkuren_IUWEEKNR_field.text= actweeknummer as string;
+        detailWerkuren.IUGWKUREN = 0;
+        StartTimeTextBox.value = "07.00.00";
+        StartTimeUrenTextBox.text = "07";
+        StartTimeMinTextBox.text = "00";
+        //detailWerkuren_form.publish();
+        detailWerkuren_IAMNAAM_comboBox.selection = 1;
+        detailWerkuren_IUSOORT_field.selection = 1;
+        detailWerkuren_IUBONNR_field.text = detailWerkuren.IUBONNR as string;
+        if(soortbon == "C")
+
+            detailWerkuren_IUVAN_nameLabel.visible = false;
+            detailWerkuren_IUVAN_Min_textBox.visible = false;
+            detailWerkuren_IUVAN_Uren_textBox.visible = false;
+            detailWerkuren_IUTOT_nameLabel.visible = false;
+            detailWerkuren_IUTOT_textBox.visible = false;
+            detailWerkuren_IUTOT_Min_textBox.visible = false;
+            detailWerkuren_IUTOT_Uren_textBox.visible = false;
+            NachtTextLabel.visible = false;
+            StartTimeUrenTextBox.disabled = false;
+            StartTimeMinTextBox.disabled = false;
+
+            vanTextLabel.visible = false;
+
+            call db2Service.getUrenTotaalperBon(detailWerkuren.IUBONNR,
+                    urenPlan, urenRealAcc, UrenRealNietAcc)
+                    returning to urenTotaal
+                    onException serviceLib.serviceExceptionHandler;
+            objectGrid.children =[objectTextLabel,urenInfoGrid    ];
+        else
+            detailWerkuren_IUVAN_nameLabel.visible = true;
+
+            detailWerkuren_IUTOT_nameLabel.visible = true;
+            detailWerkuren_IUVAN_nameLabel.visible = true;
+            detailWerkuren_IUVAN_Min_textBox.visible = true;
+            detailWerkuren_IUVAN_Uren_textBox.visible = true;
+            detailWerkuren_IUTOT_nameLabel.visible = true;
+            detailWerkuren_IUTOT_textBox.visible = true;
+            detailWerkuren_IUTOT_Min_textBox.visible = true;
+            detailWerkuren_IUTOT_Uren_textBox.visible = true;
+            StartTimeUrenTextBox.disabled = true;
+            StartTimeMinTextBox.disabled = true;
+            NachtTextLabel.visible = true;
+            vanTextLabel.visible = true;
+
+            objectGrid.children =[objectTextLabel];
+        end
+        //  detailWerkuren_IUWEEKNR_field.disabled = true;
+        
+    end
+
+    function initUren()
+        detailWerkuren.IUVAN = "07.00.00";
+        detailWerkuren_IUVAN_Uren_textBox.text = "07";
+        detailWerkuren_IUVAN_Min_textBox.text = "00";
+        detailWerkuren_IUTOT_Uren_textBox.text = "15";
+        detailWerkuren_IUTOT_Min_textBox.text = "00";
+        detailWerkuren.IUTOT = "15.00.00";
+        detailWerkuren_IUVAN_textBox.value = "07.00.00";
+        detailWerkuren_IUTOT_textBox.value = "15.00.00";
+        StartTimeTextBox.value = "07.00.00";
+        StartTimeUrenTextBox.text = "07";
+        StartTimeMinTextBox.text = "00";
+        vrijeUurButton.visible = false;
+        vrijUuurTextLabel.visible = false;
+    end
+
+    function disableUI()
+        detailWerkuren_ui.disabled = true;
+        detailWerkuren_IAMNAAM_comboBox.disabled = true;
+        detailWerkuren_IUWEEKNR_field.readOnly = true;
+        detailWerkuren_IUDAG_comboBox.disabled = true;
+        detailWerkuren_IUVAN_textBox.readOnly = true;
+        detailWerkuren_IUTOT_textBox.readOnly = true;
+        detailWerkuren_IUVAN_Uren_textBox.readOnly = true;
+        detailWerkuren_IUTOT_Uren_textBox.readOnly = true;
+        detailWerkuren_IUVAN_Min_textBox.readOnly = true;
+        detailWerkuren_IUTOT_Min_textBox.readOnly = true;
+        detailWerkuren_IUSOORT_field.disabled = true;
+        detailWerkuren_IUGWKUREN_field.disabled = true;
+        StartTimeTextBox.disabled = true;
+    end
+
+    function enableUI()
+        detailWerkuren_ui.disabled = false;
+        detailWerkuren_IAMNAAM_comboBox.disabled = false;
+        detailWerkuren_IUWEEKNR_field.readOnly = false;
+        detailWerkuren_IUDAG_comboBox.disabled = false;
+        detailWerkuren_IUVAN_textBox.readOnly = false;
+        detailWerkuren_IUTOT_textBox.readOnly = false;
+        detailWerkuren_IUVAN_Uren_textBox.readOnly = false;
+        detailWerkuren_IUTOT_Uren_textBox.readOnly = false;
+        detailWerkuren_IUVAN_Min_textBox.readOnly = false;
+        detailWerkuren_IUTOT_Min_textBox.readOnly = false;
+        detailWerkuren_IUSOORT_field.disabled = true;
+        detailWerkuren_IUSOORT_field.disabled = false;
+        detailWerkuren_IUGWKUREN_field.disabled = false;
+
+    end
+
+    function detailWerkuren_IUWEEKNR_field_onChange(event Event in)
+        if(detailWerkuren_IUWEEKNR_field.text != "")
+            bepaalStartButton();
+            weeknummer = detailWerkuren_IUWEEKNR_field.text as int;
+            searchInbnurpf.IUWEEKNR = weeknummer;
+
+            call db2Service.getUrenMedewerker(searchInbnurpf,
+                    urenPerMedeWerker) returning to urenMedewerker
+                    onException serviceLib.serviceExceptionHandler;
+        end
+    end
+
+    private function bijwerkenVan(e Event in)
+
+        msgTextLabel.text = "";
+        uren time;
+        ok boolean = true;
+        if(detailWerkuren_IUVAN_Uren_textBox.text[2 : 2] == "")
+            detailWerkuren_IUVAN_Uren_textBox.text = "0" +
+                    detailWerkuren_IUVAN_Uren_textBox.text;
+        end
+
+        if(detailWerkuren_IUVAN_Uren_textBox.text as int > 23)
+            msgTextLabel.text = "Ongeldig uur. 00-23 is toegestaan";
+            ok = false;
+        end
+        if(detailWerkuren_IUVAN_Min_textBox.text != "00" and
+                detailWerkuren_IUVAN_Min_textBox.text != "15" and
+                detailWerkuren_IUVAN_Min_textBox.text != "30" and
+                detailWerkuren_IUVAN_Min_textBox.text != "45")
+
+            msgTextLabel.text = "Ongeldige minuten. 00-15-30-45 is toegestaan";
+
+            ok = false;
+        end
+        if(ok)
+            uren = DateTimeLib.timeValue(detailWerkuren_IUVAN_Uren_textBox.text +
+                            ":" + detailWerkuren_IUVAN_Min_textBox.text +
+                            ":00");
+
+            StartTimeUrenTextBox.text = detailWerkuren_IUVAN_Uren_textBox.text;
+            StartTimeMinTextBox.text = detailWerkuren_IUVAN_Min_textBox.text;
+            detailWerkuren_IUVAN_textBox.value = uren;
+            detailWerkuren.IUVAN = uren;
+        end
+    end
+
+    private function detailWerkuren_IUDAG_comboBox_onChange(e Event in)
+        msgTextLabel.text = "";
+        bepaalStartButton();
+    end
+
+    private function bijwerkenTot(e Event in)
+        bijwerkenTotTijd();
+    end
+
+    function bijwerkenTotTijd()
+        msgTextLabel.text = "";
+        uren time;
+        ok boolean = true;
+        if(detailWerkuren_IUTOT_Uren_textBox.text[2 : 2] == "")
+            detailWerkuren_IUTOT_Uren_textBox.text = "0" +
+                    detailWerkuren_IUTOT_Uren_textBox.text;
+        end
+
+        if(detailWerkuren_IUTOT_Uren_textBox.text as int > 24)
+            msgTextLabel.text = "Ongeldig uur. 00-24 is toegestaan";
+            ok = false;
+        end
+        if(detailWerkuren_IUTOT_Min_textBox.text != "00" and
+                detailWerkuren_IUTOT_Min_textBox.text != "15" and
+                detailWerkuren_IUTOT_Min_textBox.text != "30" and
+                detailWerkuren_IUTOT_Min_textBox.text != "45")
+
+            msgTextLabel.text = "Ongeldige minuten. 00-15-30-45 is toegestaan";
+            ok = false;
+            if(detailWerkuren_IUTOT_Uren_textBox.text as int == 24 and
+                    detailWerkuren_IUTOT_Min_textBox.text != "00")
+                msgTextLabel.text = "Ongeldige minuten. Bij 24 alleen 00 toegestaan";
+            end
+        end
+        if(ok)
+            if(detailWerkuren_IUTOT_Uren_textBox.text as int == 24)
+                uren = "23:59:00";
+            else
+                uren = DateTimeLib.timeValue(detailWerkuren_IUTOT_Uren_textBox.text +
+                                ":" + detailWerkuren_IUTOT_Min_textBox.text +
+                                ":00");
+            end
+
+            detailWerkuren.IUTOT = uren;
+            detailWerkuren_IUTOT_textBox.value = uren;
+
+        end
+
+    end
+
+    private function bijwerkenStart(e Event in)
+        bijwerkenstartTijd();
+    end
+
+    function bijwerkenstartTijd()
+        msgTextLabel.text = "";
+        uren time;
+        ok boolean = true;
+        if(StartTimeUrenTextBox.text[2 : 2] == "")
+            StartTimeUrenTextBox.text = "0" + StartTimeUrenTextBox.text;
+        end
+
+        if(StartTimeUrenTextBox.text as int > 23)
+            msgTextLabel.text = "Ongeldig uur. 00-23 is toegestaan";
+            ok = false;
+        end
+        if(StartTimeMinTextBox.text != "00" and StartTimeMinTextBox.text !=
+                        "15" and StartTimeMinTextBox.text != "30" and
+                StartTimeMinTextBox.text != "45")
+
+            msgTextLabel.text = "Ongeldige minuten. 00-15-30-45 is toegestaan";
+            ok = false;
+        end
+        if(ok)
+            uren = DateTimeLib.timeValue(StartTimeUrenTextBox.text + ":" +
+                            StartTimeMinTextBox.text + ":00");
+            StartTimeTextBox.value = uren;
+
+        end
+
+    end
+
+    function bepaalVrijeUur_onClick(e Event in)
+        starttijd time = "07.00.00";
+        dag string;
+        case(detailWerkuren_IUDAG_comboBox.selection)
+
+            when(8)
+                dag = "zo";
+            when(2)
+                dag = "ma";
+            when(3)
+                dag = "di";
+            when(4)
+                dag = "wo";
+            when(5)
+                dag = "do";
+            when(6)
+                dag = "vr";
+            when(7)
+                dag = "za";
+
+        end
+        for(i int from 1 to urenPerMedewerker.getSize())
+            if(urenPerMedewerker[i].IUTOT > urenPerMedewerker[i].IUVAN and 
+            	urenPerMedewerker[i].IUTOT !="23.59.00");
+                if(dag == urenPerMedewerker[i].IUDAG and
+                        urenPerMedewerker[i].IUTOT > starttijd)
+                    starttijd = urenPerMedewerker[i].IUTOT;
+                end
+            end
+        end
+        if(starttijd != "07.00.00")
+            if(soortbon == "E")
+
+                detailWerkuren_IUVAN_Uren_textBox.text = libraryVerloning.omzettenUren(starttijd);
+                detailWerkuren_IUVAN_Min_textBox.text = libraryVerloning.omzettenMinuten(starttijd);
+                detailWerkuren_IUTOT_Uren_textBox.text = "00";
+                detailWerkuren_IUTOT_Min_textBox.text = "00";
+
+            end
+            StartTimeUrenTextBox.text = libraryVerloning.omzettenUren(starttijd);
+            StartTimeMinTextBox.text = libraryVerloning.omzettenMinuten(starttijd);
+
+            totTextLabel.text = "";
+        else
+            initUren();
+        end
+		bepaalStartButton();
+    end
+
+    function bepaalStartButton()
+        if(actie != "delete")
+            if(detailWerkuren_IAMNAAM_comboBox.selection != 1 and
+                    detailWerkuren_IUWEEKNR_field.text != "" and
+                    detailWerkuren_IUDAG_comboBox.selection != 1)
+                vrijeUurButton.visible = true;
+                vrijUuurTextLabel.visible = true;
+            else
+                vrijeUurButton.visible = false;
+                vrijUuurTextLabel.visible = false;
+            end
+        end
+    end
+    function zoekButton_onClick(event Event in)
+     
+        msgTextLabel.text = "";
+		
+        call db2Service.zoekPersoneel(zoekTextField.text, medewerkersArray)
+                returning to medewerkersFound
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+	function medewerkersFound(medewerkersArray inamdwpfSQLrec[] in, retResult string in)
+		medewerkersArray_ui.data =medewerkersArray as any[];
+		ui.appendChild(medewerkersGrid);
+		msgTextLabel.text=retresult;
+		
+	end
+
+
+	private function cellClicked (grid DataGrid in)
+		selectedRecord = medewerkersArray_ui.getSelection()[1] as
+                inamdwpfSQLrec;
+	end
+
+	private function selecteerButton_onClick (e Event in)
+		 detailWerkuren_IAMNAAM_comboBox.selection = libraryVerloning.zoekMdwNaam(selectedrecord.IAMDWID);
+		
+	end
+
+	private function sluitButton_onClick (e Event in)
+		ui.removeChild(medewerkersGrid);
+		
+		zoekTextField.text="";
+	end
+
+end

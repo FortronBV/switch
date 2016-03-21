@@ -1,0 +1,192 @@
+ package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.Box;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.GridLayoutLib;
+import com.ibm.egl.rui.widgets.HTML;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import dataFortron.Baoadrp;
+import dataFortron.baocntpSQLrec;
+import dataVerloning.badocpfRec;
+import dataVerloning.badocpfSQLrec;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoTextArea;
+import libraries.libraryVerloning;
+import services.SQLservice;
+import utils.map.GoogleMap;
+import utils.map.GoogleMapLib;
+import utils.map.MapMarker;
+import egl.ui.rui.Widget;
+
+//
+//
+
+handler detailObject type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "detailsBon"}
+
+    ui GridLayout{columns = 3, rows = 5, cellPadding = 4, children =[
+                     map, contactArray_ui, map, msgTextLabel, buttonGrid, bonTextLabel, objectRecord_ui]};
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    objectRecord Baoadrp;
+    contactArray baocntpSQLrec[];
+
+    objectRecord_ui GridLayout{layoutData = new GridLayoutData{row = 2, column = 2}, rows = 7, columns = 2, cellPadding = 4, children =[
+                    nummerGrid, objectRecord_OAOPMERK_field,
+                    objectRecord_OAOPMERK_nameLabel,
+                    objectRecord_OAOBJNR_nameLabel,
+                    objectRecord_OAOMSCHR_nameLabel,
+                    objectRecord_OAOMSCHR_field,
+                    objectRecord_OASTRAAT_nameLabel,
+                    objectRecord_OASTRAAT_field,
+                    objectRecord_OAPOSTCN_nameLabel,
+                    objectRecord_OAPOSTCN_field, klantTextLabel, klantTextField
+            ]};
+
+    objectRecord_OAOBJNR_nameLabel TextLabel{text = "Nummer", layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold"};
+    objectRecord_OAOBJNR_field TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}};
+
+    objectRecord_OAOMSCHR_nameLabel TextLabel{text = "Omschrijving", layoutData = new GridLayoutData{row = 2, column = 1}, fontWeight = "bold"};
+    objectRecord_OAOMSCHR_field TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}};
+
+    objectRecord_OASTRAAT_nameLabel TextLabel{text = "Adres", layoutData = new GridLayoutData{row = 3, column = 1}, fontWeight = "bold"};
+    objectRecord_OASTRAAT_field TextLabel{layoutData = new GridLayoutData{row = 3, column = 2}};
+
+    objectRecord_OAPOSTCN_nameLabel TextLabel{text = "Postcode/Plaats", layoutData = new GridLayoutData{row = 4, column = 1}, fontWeight = "bold"};
+    objectRecord_OAPOSTCN_field TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}};
+
+    objectRecord_OAOPMERK_nameLabel TextLabel{text = "Opmerkingen", layoutData = new GridLayoutData{row = 7, column = 1}, fontWeight = "bold"};
+    objectRecord_OAOPMERK_field DojoTextArea{readOnly = true, layoutData = new GridLayoutData{row = 7, column = 2}, width = "250"};
+
+    bonTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}};
+    klantTextLabel TextLabel{layoutData = new GridLayoutData{row = 5, column = 1}, text = "Klant", fontWeight = "bold"};
+    klantTextField TextLabel{layoutData = new GridLayoutData{row = 5, column = 2}};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 2}, cellPadding = 4, rows = 1, columns = 2, children =[cancelButton
+            ]};
+
+    //mapBox Box{layoutData = new GridLayoutData{row = 4, column = 3}, padding = 8, children =[
+   // map        ]};
+    map GoogleMap{width = 400, height = 300,
+    	layoutData = new GridLayoutData{ row = 2, column = 3 }};
+    GoogleMap GoogleMap{width = 500, height = 500, mapType = GoogleMapLib.TERRAIN};
+    adres string;
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, fontWeight = "bold", color = "DarkSlateBlue", fontSize = "14"};
+    bonnummer int;
+
+    contactArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 2,
+    	horizontalSpan = 2}, columns =[
+                    new DataGridColumn{name = "OCNAAM", displayName = "Naam", width = 300},
+                    new DataGridColumn{name = "OCTEL", displayName = "Telefoon", width = 200},
+                    new DataGridColumn{name = "OCEMAIL", displayName = "Email", width = 400},
+                    new DataGridColumn{name = "DUMMY", displayName = "", width = 1}
+            ], data = contactArray as any[], editorBehaviors = [opmaak] ,
+            showButtonBar = false,
+            fontSize = "10"};
+    cancelButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= cancelButton_onClick};
+    nummerGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 2, children =[ RieHTML,
+                    objectRecord_OAOBJNR_field]};
+                    
+    //RIEImage DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, width = 100, height = 50, text = "<img src='images/rie.png' border=0  width=47 height=47   style='cursor: hand;'  title='Rie'> ", onClick ::= RieButton_onClick};
+	RieHTML HTML {layoutData = new GridLayoutData{row = 1, column = 2}}; 
+    badocpfRec badocpfRec;
+    docsArray badocpfSQLrec[];
+	riedocument string;   
+
+    function start()
+          
+      
+    end
+
+    function getdata()
+    	
+        bonTextLabel.text = "Bonnummer " + bonnummer as string;
+        msgTextLabel.text = "";
+
+        call db2Service.getObjectInfo(bonnummer, objectRecord, contactArray)
+                returning to objectRetrieved;
+
+    end
+
+    function docsRetrieved(docsArray badocpfSQLrec[] in, retResult string in)
+       
+        if(docsArray.getSize() != 0)
+        try
+           badocpfRec.DCDOCFILE = docsArray[1].DCDOCFILE;
+           riedocument=libraryVerloning.RIEPath+  badocpfRec.DCDOCFILE;
+          // HTMLtext string = "<html><head><title>RIE</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"><LINK HREF=\"/fortron.css\" REL=\"stylesheet\" TYPE=\"text/css\"></head><body><a href=\"#\" onclick=\"window.open('" + RieDocument + "' , '_blank', 'fullscreen=yes'); return false;\">RIE</a></body></html>";
+           HTMLtext string = "<html><head><title>RIE</title><meta http-equiv=\"Content-Type\" content=\"text/html; charset=iso-8859-1\"><LINK HREF=\"/fortron.css\" REL=\"stylesheet\" TYPE=\"text/css\"></head><body><img src=\"images\\rie.png\" width=40 height=40  onclick=\"window.open('" + RieDocument + "' , '_blank', 'fullscreen=yes'); return false;\"></img></body></html>";
+           RieHTML.text=HTMLtext;
+           RieHTML.visible = true;
+           
+           onException(exception AnyException)
+           end
+           
+        end
+    end
+
+    function objectRetrieved(dsprec Baoadrp in, contactArray baocntpSQLrec[] in, retResult string in)
+
+        msgTextLabel.text = retresult;
+        objectRecord_OAOBJNR_field.text = dsprec.OAOBJNR as string;
+        objectRecord_OAOMSCHR_field.text = dsprec.OAOMSCHR;
+        objectRecord_OASTRAAT_field.text = dsprec.OASTRAAT + " " +
+                dsprec.OAHUISNR as string + " " + dsprec.OAHUISNT;
+        objectRecord_OAPOSTCN_field.text = dsprec.OAPOSTCN as string + " " +
+                dsprec.OAPOSTCA + " " + dsprec.OAPLAATS;
+        objectRecord_OAOPMERK_field.text = dsprec.OAOPMERK;
+        objectRecord_ui.disabled = false;
+        setData(objectRecord_OASTRAAT_Field.text + " " +
+                        objectRecord_OAPOSTCN_field.text);
+
+        contactArray_ui.data = contactArray as any[];
+        badocpfRec.DCOBJECT = dsprec.OAOBJNR;
+        badocpfRec.DCVOLGNR = dsprec.OAVOLGNR;
+
+        call db2Service.getDocs(badocpfRec, docsArray)
+                returning to docsRetrieved;
+     
+
+    end
+
+    function initRui()
+  		RieHTML.visible = false;
+    end
+
+    function setData(adres string in)
+        try
+
+            map.zoom = 16;
+            marker MapMarker{address = adres, description = adres};
+            map.addMarker(marker);
+            position float[] = map.centerPosition;
+
+        onException(exception AnyException)
+        end
+    end
+
+    private function cancelButton_onClick(e Event in)
+        infobus.publish("SEL_BONNEN", "");
+    end
+
+    private function RieButton_onClick(e Event in)
+        infobus.publish("DSP_RIE", badocpfRec);
+    end
+
+	private function opmaak (grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+		if(column.name == "OCEMAIL")
+			mailtekst string= "<A HREF=mailto:"+rowData.OCEMAIL as string + ">" + rowData.OCEMAIL as string + "</A>";
+			
+            return(new HTML{text = mailtekst});
+        end
+	end
+end

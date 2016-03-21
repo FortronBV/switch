@@ -1,0 +1,398 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.HyperLink;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inbnurpfSQLrec;
+import dataVerloning.inbyzupfSQLrec;
+import dataVerloning.urenPerMedewerker;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoCheckBox;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler werkenMetUrenPerBon type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "werkenMetUrenPerBon"}
+
+    ui GridLayout{columns = 3, rows = 6, cellPadding = 4, children =[Helplink, infoGrid,
+                    medewerkerArray_ui, buttonGrid, msgTextLabel,
+                    AkkoordCheckBox]};
+
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    //=============================================================================================================
+    //records
+    //=============================================================================================================
+    urenRec inbnurpfSQLrec;
+    urenBijzrec inbyzupfSQLrec;
+    urenArray2 inbnurpfSQLrec[0];
+    urenBijzArray inbyzupfSQLrec[0];
+    selectedrecord urenPerMedewerker;
+    selectedArray urenPerMedewerker[0];
+    medewerkerArray urenPerMedewerker[0];
+    medewerkerRec urenPerMedewerker;
+    //=============================================================================================================
+    //widgets
+    //=============================================================================================================
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 6, column = 2}, fontWeight = "bold", color = "Blue"};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 5}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    BonnummerTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold", text = "Bonnummer:"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 5, column = 2}, cellPadding = 4, rows = 1, columns = 5, children =[
+                    backButton, deleteButton, akkoordButton, selectButton,
+                    addButton]};
+    selectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/upd.png' border=0  width=47 height=47   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= selectButton_onClick};
+
+    deleteButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/del.png' border=0  width=47 height=47   style='cursor: hand;'  title='Verwijderen'> ", onClick ::= deleteButton_onClick};
+    addButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/add.png' border=0  width=47 height=47   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= addButton_onClick};
+    //=============================================================================================================
+    //variabelen
+    //=============================================================================================================
+    medewerker int;
+    bonnummer int;
+    urenGewerktAcc decimal(9, 2);
+    urenGewerktNietAcc decimal(9, 2);
+    urenGepland decimal(9, 2);
+
+    medewerkerArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 2}, columns =[
+                    new DataGridColumn{name = "MDWNAAM", displayName = "Medewerker", width = 170},
+                    new DataGridColumn{name = "WEEKNR", displayName = "Week", width = 75},
+                    new DataGridColumn{name = "Dag", displayName = "Dag", width = 50},
+                    new DataGridColumn{name = "Uren", displayName = "Uren", width = 60},
+                    new DataGridColumn{name = "Van", displayName = "Van", width = 60},
+                    new DataGridColumn{name = "Tot", displayName = "Tot", width = 60},
+                    new DataGridColumn{name = "Soort", displayName = "Soort", width = 120},
+                    new DataGridColumn{name = "Akkoord", displayName = "Akk", width = 50}
+            ], editorBehaviors =[getAkkoordBon
+            ], data = medewerkerArray as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ], showCheckBoxes = true, checkboxListeners =[checkboxListener
+            ], showScrollbar = false, showButtonBar = true};
+
+    akkoordButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/accoord.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Accorderen'> ", onClick ::= akkoordButton_onClick};
+    infoGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 2, children =[
+                    urenTextLabel, BonnummerTextLabel]};
+    urenTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}};
+    soortbon string;
+    planuren decimal(7, 2);
+    akkoordGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, cellPadding = 4, rows = 1, columns = 3, children =[
+                    akkoordTextLabel, akkoordJa, AkkoordNee]};
+    akkoordTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Er zijn mee uren besteed dan gepland. Toch accorderen?"};
+    akkoordJa Dojobutton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/accoord.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Accorderen'> ", onClick ::= akkoordJaButton_onClick};
+    akkoordNee Dojobutton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/niet-accoord.png' border=0  width=40 height=47   style='cursor: hand;'  title='Accorderen'> ", onClick ::= akkoordNeeButton_onClick};
+
+    AkkoordCheckBox DojoCheckBox{layoutData = new GridLayoutData{row = 2, column = 2}, fontWeight = "bold", text = "Selecteer alles", selected = false, onChange ::= checkbox_change};
+    
+	HelpLink HyperLink{layoutData = new GridLayoutData{row = 2, column = 3}, text = "<img title='Help'  style='cursor: hand;' src='images/help.png' width=55, height=55>", href = "documenten/UrenHelp.pdf", target = "_blank"};
+    function start()
+
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+        medewerkerArray_ui.disabled = true;
+        uren string;
+
+        try
+            call db2Service.getBonuren2(bonnummer, urenArray2, planuren, uren,
+                    soortbon)
+
+                    returning to weekstaatRetrieved;
+        onException(exception AnyException)
+            medewerkerArray_ui.disabled = false;
+            SysLib.writeStdout("Er is een fout opgetreden. Sluit af en start het programma opnieuw!");
+        end
+    end
+
+    function weekstaatRetrieved(urenArray inbnurpfSQLrec[] in, planuren decimal(7, 2) in, uren string in, Soort string in, retResult string in)
+
+        urengewerktAcc = 0;
+        urengewerktNietAcc = 0;
+        urenTextLabel.text = "";
+        try
+            medewerkerArray.removeAll();
+            for(i int from 1 to urenArray.getSize())
+                medewerkerRec.MDWID = urenArray[i].IUMDWID;
+                medewerkerRec.MDWNAAM = urenArray[i].IAMNAAM;
+                medewerkerRec.BONNR = urenArray[i].IUBONNR;
+                medewerkerRec.WEEKNR = urenArray[i].IUWEEKNR;
+                //medewerkerRec.DAG = urenArray[i].IUDAG;
+                medewerkerRec.VAn = urenArray[i].IUVAN;
+                medewerkerRec.tot = urenArray[i].IUTOT;
+                medewerkerRec.UREN = urenArray[i].IUGWKUREN;
+                medewerkerRec.AKKOORD = urenArray[i].IUURAKK;
+                medewerkerRec.VOLGNR = urenArray[i].IUVOLGNR;
+                medewerkerRec.Soort = urenArray[i].IUSOORT;
+                case(urenArray[i].IUDAG as string)
+                    when("7")
+                        medewerkerRec.DAG = "zo";
+                    when("1")
+                        medewerkerRec.DAG = "ma";
+                    when("2")
+                        medewerkerRec.DAG = "di";
+                    when("3")
+                        medewerkerRec.DAG = "wo";
+                    when("4")
+                        medewerkerRec.DAG = "do";
+                    when("5")
+                        medewerkerRec.DAG = "vr";
+                    when("6")
+                        medewerkerRec.DAG = "za";
+
+                end
+                if(medewerkerRec.soort != "B")
+                    if(urenArray[i].IUURAKK == "J")
+                        urengewerktAcc += urenArray[i].IUGWKUREN;
+                    else
+                        urengewerktNietAcc += urenArray[i].IUGWKUREN;
+                    end
+                end
+                medewerkerRec.Soort = urenArray[i].IUSOORT;
+                medewerkerArray.appendElement(medewerkerRec);
+            end
+
+            medewerkerArray_ui.data = medewerkerArray as any[];
+            medewerkerArray_ui.disabled = false;
+            soortbon = soort;
+            if(soortBon == "E")
+                urenInt int = uren as int;
+                urenFac decimal(9, 2) = urenint / 100;
+                //urenfac2 string = urenOmzetten( urenfac as string) ;
+                
+                urenTextLabel.text = " Factuur uren  " +
+                        ruiFunctions.numberReturnComma(urenFac) +
+                        " Verloond Accoord   " +
+                        ruiFunctions.numberReturnComma(urenGewerktAcc) +
+                        " Verloond Niet-Accoord   " +
+                        ruiFunctions.numberReturnComma(urenGewerktNietAcc);
+
+            else
+                urenTextLabel.text = " Geplande uren  " +
+                        ruiFunctions.numberReturnComma(planuren) +
+                        " Verloond Accoord   " +
+                        ruiFunctions.numberReturnComma(urenGewerktAcc) +
+                        " Verloond Niet-Accoord   " +
+                        ruiFunctions.numberReturnComma(urenGewerktNietAcc);
+
+            end
+        onException(exception AnyException)
+        end
+    end
+
+    private function cellClicked(grid DataGrid in)
+        selectedRecord = medewerkerArray_ui.getSelection()[1] as
+                urenPerMedewerker;
+        if(selectedrecord.AKKOORD == "N")
+
+            deleteButton.disabled = false;
+            deletebutton.text = libraryVerloning.DEL_BUTTON;
+            selectButton.disabled = false;
+            selectbutton.text = libraryVerloning.UPD_BUTTON;
+
+        else
+
+            deleteButton.disabled = true;
+            deletebutton.text = libraryVerloning.DEL_DIS_BUTTON;
+            selectButton.disabled = true;
+            selectbutton.text = libraryVerloning.UPD_DIS_BUTTON;
+        end
+
+    end
+
+    function selectButton_onClick(event Event in)
+
+        selectedrecord.Soortbon = soortbon;
+        infobus.publish("UREN_MEDEW_BON", selectedrecord);
+
+    end
+
+    function backButton_onClick(event Event in)
+        infobus.publish("SEL_BONNEN_REF", "");
+    end
+
+    function akkoordButton_onClick(event Event in)
+
+        accUrenArray inbnurpfSQLRec[0];
+        ACCbijzUrenArray inbyzupfSQLrec[0];
+        accUrenRec inbnurpfSQLRec;
+        ACCbijzUrenRec inbyzupfSQLrec;
+
+        for(i int from 1 to medewerkerArray_ui.getChecked().getSize())
+            if(medewerkerArray_ui.getchecked()[i].uren as decimal(4, 2) != 0 and medewerkerArray_ui.getChecked()[i].Akkoord  as string !="J")
+                accurenRec.IUBONNR = medewerkerArray_ui.getChecked()[i].BoNNR;
+                accurenRec.IUVOLGNR = medewerkerArray_ui.getchecked()[i].VOLGNR;
+                accurenRec.IUDAG = medewerkerArray_ui.getchecked()[i].DAG;
+                accurenRec.IUMDWID = medewerkerArray_ui.getchecked()[i].MDWID;
+                accurenRec.IUURAKK = "J";
+                accurenRec.IUWEEKNR = medewerkerArray_ui.getchecked()[i].Weeknr;
+                accurenRec.IUGWKUREN = medewerkerArray_ui.getchecked()[i].uren;
+
+                accUrenArray.appendElement(accurenrec);
+            end
+        end
+        call db2Service.accUrendetail(accUrenArray, ACCbijzUrenArray)
+
+                returning to urenAccoord;
+    end
+
+    function urenAccoord(retResult string in)
+        getdata();
+        akkoordButton.disabled = true;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+        AkkoordCheckBox.text = "Selecteer alles";
+    end
+
+    function getAkkoordBon(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+
+        try
+            if(column.name == "Uren")
+
+                return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.Uren as string) as string});
+
+            end
+            if(column.name == "Van")
+                tijd string = rowData.Van as string;
+                return(new textlabel{text = tijd[1 : 5]});
+            end
+            if(column.name == "Tot")
+
+                //     if(soortbon == "E")
+                
+                tijd string = rowData.Tot as string;
+                if(tijd[1 : 5] == "23:59")
+                    tijd = "24:00";
+                end
+                return(new textlabel{text = tijd[1 : 5]});
+            //     else
+            //         return(new textlabel{text = ""});
+            //    end
+            end
+
+            if(column.name == "WEEKNR")
+                weektekst string = rowData.WEEKNR as string;
+                return(new textlabel{text = weekTekst[1 : 4] + "-" +
+                                weekTekst[5 : 6]});
+            end
+
+            if(column.name == "Akkoord")
+
+                if(rowData.Akkoord as string == "J")
+
+                    return(new image{src = "images/gereed.jpg"});
+
+                else
+                    return(new image{src = "images/nietakkoord.jpg"});
+
+                end
+            end
+            if(column.name == "Soort")
+
+                case(rowData.Soort as string)
+                    when("W")
+
+                        return(new textlabel{text = "Werk"});
+                    when("O")
+
+                        return(new textlabel{text = "Reis onder werktijd"});
+                    when("B")
+
+                        return(new textlabel{text = "Reis buiten werktijd"});
+                    otherwise
+                        return(new textlabel{text = rowData.Soort as string});
+                end
+            end
+
+        onException(exception AnyException)
+        end
+    end
+
+    function initRui()
+        deleteButton.disabled = true;
+        akkoordButton.disabled = true;
+        selectButton.disabled = true;
+        deletebutton.text = libraryVerloning.DEL_DIS_BUTTON;
+        selectbutton.text = libraryVerloning.UPD_DIS_BUTTON;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+        medewerkerArray_ui.startRow = 1;
+        // selectedrecord.BONNR =0;  
+    end
+
+    private function deleteButton_onClick(e Event in)
+        selectedrecord.Soortbon = soortbon;
+        infobus.publish("DEL_UREN_MEDEW_BON", selectedrecord);
+    end
+
+    private function addButton_onClick(e Event in)
+        infobus.publish("ADD_UREN_MEDEW_BON", selectedrecord);
+
+    end
+
+    private function checkboxListener(grid DataGrid in)
+        selectedArray = medewerkerArray_ui.getChecked() as urenPerMedewerker[];
+        akkoordButton.disabled = true;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+        for(i int from 1 to selectedArray.getsize())
+            if(akkoordButton.disabled == true)
+                if(selectedArray[i].AKKOORD == "N" and selectedArray[i].UREN !=
+                                0)
+                    akkoordButton.disabled = false;
+                    akkoordbutton.text = libraryVerloning.ACC_BUTTON;
+                end
+            end
+        end
+    end
+
+    function urenOmzetten(urenfac string) returns(string)
+        voor string;
+        na string;
+        uren int;
+        minuten decimal(5, 2);
+        totaal decimal(7, 2);
+
+        Index int = strlib.indexOf(urenfac, ".");
+        if(Index != 0)
+            // meer dan 1 uur
+            voor = urenfac[1 : index - 1];
+            na = urenfac[index + 1 : index + 3];
+            minuten = na as int / 60;
+            uren = voor as int / 60;
+            totaal = uren + minuten;
+            urenfac = totaal as string;
+        else
+            minuten = urenfac as int / 60;
+            urenfac = minuten as string;
+        end
+        return(urenfac);
+    end
+
+    private function akkoordJaButton_onClick(e Event in)
+    end
+
+    private function akkoordNeeButton_onClick(e Event in)
+    end
+
+    private function checkbox_change(e Event in)
+        if(AkkoordCheckBox.selected)
+            medewerkerArray_ui.checkAll();
+            AkkoordCheckBox.text = "Selecteer niets";
+        else
+            medewerkerArray_ui.uncheckAll();
+            AkkoordCheckBox.text = "Selecteer alles";
+        end
+    end
+end

@@ -1,0 +1,203 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inbnurpfRec;
+import dataVerloning.searchInbnurpf;
+import dataVerloning.urenPDASQLrec;
+import dataVerloning.urenPerBonSQLrec;
+import dojo.widgets.DojoButton;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler urenPerBon type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "UrenPerBonHandler"}
+
+    ui GridLayout{columns = 5, rows = 5, cellPadding = 4, backgroundColor = "AliceBlue"};
+    //kopTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Werken met uren per bon", fontWeight = "bold", fontSize = "16"};
+    //logoImage Image{layoutData = new GridLayoutData{row = 1, column = 1}, src = "images/logo.png"};
+    infoGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 1, horizontalSpan = 3}, cellPadding = 4, rows = 5, columns = 2};
+    //voormanTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, text = "Voorman: Wim Faessen", fontWeight = "bold", fontSize = "14"};
+    bonLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 1}, text = "Bonnummer", fontWeight = "bold"};
+    objectLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Object", fontWeight = "bold"};
+    urengeplandLabel TextLabel{layoutData = new GridLayoutData{row = 3, column = 1}, text = "Geplande uren", fontWeight = "bold"};
+    urenGewerktLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 1}, text = "Gewerkte uren", fontWeight = "bold"};
+    verschilLabel TextLabel{layoutData = new GridLayoutData{row = 5, column = 1}, text = "Verschil", fontWeight = "bold"};
+    objectText TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}};
+    bonText TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}};
+    urenGeplandText TextLabel{layoutData = new GridLayoutData{row = 3, column = 2}};
+    urenGewerktText TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}};
+    verschilText TextLabel{layoutData = new GridLayoutData{row = 5, column = 2}};
+
+    // interface tabel uren per bon
+    urenArray urenPerBonSQLrec[];
+    selectedrecord urenPerBonSQLrec;
+    bonnummer int;
+    status string;
+    dbService SQLService{@DedicatedService};
+    // new DataGridColumn{name = "IUTOT", displayName = "Tot", width = 80},
+    inbnurpfArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 1, horizontalSpan = 3}, columns =[
+                    new DataGridColumn{name = "IUWEEKNR", displayName = "Week", width = 75},
+                    new DataGridColumn{name = "IUDAG", displayName = "Dag", width = 75},
+                    new DataGridColumn{name = "IUMDWID", displayName = "Medewerker", width = 200},
+                    new DataGridColumn{name = "IUGWKUREN", displayName = "Uren", width = 100},
+                    new DataGridColumn{name = "IUSOORT", displayName = "Soort", width = 100},
+                    new DataGridColumn{name = "IUVAN", displayName = "Van", width = 80},
+                    new DataGridColumn{name = "IUURAKK", displayName = "Acc.", width = 60}
+            ], editorBehaviors =[getAkkoordBon
+            ], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners ::= cellClicked, data = UrenArray as any[]};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 1, horizontalSpan = 3}, cellPadding = 4, rows = 1, columns = 5, children =[
+                    cancelButton, accButton, delButton, updButton, addButton]};
+    addButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Toevoegen", onClick ::= addButton_onClick};
+    updButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Wijzigen", onClick ::= updButton_onClick};
+    delButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "Verwijderen", onClick ::= delButton_onClick};
+    accButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "Alles accorderen", onClick ::= accButton_onClick};
+    cancelButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 5}, text = "Annuleren", onClick ::= cancelButton_onClick};
+
+    urenArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 1}, columns =[
+                    //new DataGridColumn {name = "Bonnummer", displayName = "Bonnummer", width = 120},
+                    new DataGridColumn{name = "Weeknummer", displayName = "Weeknr", width = 80},
+                    new DataGridColumn{name = "Dag", displayName = "Dag", width = 50},
+                    new DataGridColumn{name = "MedewerkerNaam", displayName = "Medewerker", width = 200},
+                    new DataGridColumn{name = "Uren", displayName = "Uren verloond", width = 120},
+                    new DataGridColumn{name = "Soort", displayName = "Soort", width = 120},
+
+                    new DataGridColumn{name = "Van", displayName = "Van", width = 120},
+                    new DataGridColumn{name = "Tot", displayName = "Tot", width = 120},
+
+                    //new DataGridColumn {name = "Opmerking", displayName = "Opmerking", width = 120},
+                    new DataGridColumn{name = "Akkoord", displayName = "Akk.", width = 50}
+            ], data = urenArray as any[], editorBehaviors =[getAkkoordBon
+            ], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners ::= cellClicked};
+  
+
+    function start()
+      end
+
+    function getUren()
+      
+        urenGewerktText.text = "";
+        verschilText.text = "";
+        call dbService.getUrenPerBon(bonnummer, urenArray)
+                returning to fillUren1;
+    end
+
+    function fillUren1(bonnummer int in, urenArray urenPerBonSQLrec[] in, retResult string in)
+        urenArray_ui.data = urenArray as any[];
+        gewerkt decimal(7, 2) = 0;
+        for(i int from 1 to urenArray.getSize())
+            if(UrenArray[i].SOORT != "RBW")
+                gewerkt = gewerkt + urenArray[i].UREN;
+            end
+        end
+        //urenGewerktText.text = gewerkt as string;
+       // verschilText.text =(urenGeplandText.text as decimal(7, 2) -
+         //       gewerkt) as string;
+                bonText.text=bonnummer as string;    
+    end
+
+    
+    function cellClicked(myGrid DataGrid in)
+
+    //        selectedRecord = inbnurpfArray_ui.getSelection()[1] as inbnurpfRec;
+    //        if(selectedrecord.IUURAKK == "J")
+    //            updButton.disabled = true;
+    //            delButton.disabled = true;
+    //
+    //        else
+    //            updButton.disabled = false;
+    //            delButton.disabled = false;
+    //        end
+    end
+
+    function getAkkoordBon(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+        if(column.name == "Akkoord")
+
+            if(rowData.akkoord as boolean == true)
+
+                return(new Image{src = "images/gereed.jpg"});
+                        else
+                            return(new Image{src = "images/nietakkoord.jpg"});
+            end
+        end
+
+        if(column.name == "Van")
+            return(new textlabel{text = DateTimeLib.timeOf(rowData.van) as string});
+        end
+        if(column.name == "Tot")
+            return(new textlabel{text = DateTimeLib.timeOf(rowData.tot) as string});
+        end
+        if(column.name == "Soort")
+            case(rowData.SOORT as string)
+                when("WRK")
+                    return(new textlabel{text = "Werk"});
+                when("ROW")
+                    return(new textlabel{text = "Reis onder werktijd"});
+                when("RBW")
+                    return(new textlabel{text = "Reis buiten werktijd"});
+            end
+        end
+
+        
+    end
+
+    function updButton_onClick(event Event in)
+        InfobusName string = "URENPERBON_UPDATE";
+
+        InfoBus.publish(InfobusName, selectedRecord);
+
+    end
+
+    function delButton_onClick(event Event in)
+        InfobusName string = "URENPERBON_DELETE";
+
+        InfoBus.publish(InfobusName, selectedRecord);
+
+    end
+
+    function accButton_onClick(event Event in)
+
+    //call dbService.accDetailUren(searchInbnurpf) returning to geaccordeerd;
+    end
+
+    function geaccordeerd(retResult string in)
+        getUren();
+    end
+
+    function cancelButton_onClick(event Event in)
+        InfobusName string = "SELECTBON";
+
+        InfoBus.publish(InfobusName, "");
+    end
+
+    function addButton_onClick(event Event in)
+
+        InfobusName string = "URENPERBON_INSERT";
+
+        InfoBus.publish(InfobusName, inbnurpfArray_ui.data);
+
+    end
+
+    function initRUI()
+
+        infoGrid.children =[verschilText, urenGewerktText, urenGeplandText,
+                bonText, objectText, verschilLabel, urenGewerktLabel,
+                urengeplandLabel, objectLabel, bonLabel];
+        ui.children =[buttonGrid, infoGrid, urenArray_ui];
+
+    end
+
+end

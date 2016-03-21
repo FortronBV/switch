@@ -1,0 +1,646 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.Combo;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.HyperLink;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.boninfo;
+import dataVerloning.inbasInfSQLrec;
+import dataVerloning.ininfopfSQLrec;
+import dataVerloning.searchInbaspf;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoTextField;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler selecteerBon type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "selecteerBon"}
+
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4};
+
+    dbService SQLService{@DedicatedService};
+    userid string;
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, color = "DarkSlateBlue", fontWeight = "bold", fontSize = "14"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, cellPadding = 4, rows = 1, columns = 7, children =[
+                    postenButton, objectButton, cancelButton, MaterialenButton,
+                    tekenButton, werkUrenButton, dagOpslaanButton]};
+    werkUrenButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/klok.png' border=0  width=47 height=47   style='cursor: hand;'  title='Uren'> ", onClick ::= werkUrenButton_onClick, width = "60"};
+    tekenButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 6}, text = "<img src='images/tekenen.png' border=0  width=47 height=47   style='cursor: hand;'  title='Handtekening/Gereed melden'> ", onClick ::= tekenButton_onClick};
+    cancelButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 7}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= cancelButton_onClick};
+
+    bonnenPdaArray inbasInfSQLrec[0];
+    searchInbaspf searchInbaspf;
+    selectedrecord inbasInfSQLrec;
+    dagenArray ininfopfSQLrec[0];
+    dagRecord ininfopfSQLrec;
+
+    bonnenPdaArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 2}, columns =[
+                    new DataGridColumn{name = "INWEEKNR", displayName = "Week", width = 70},
+                    new DataGridColumn{name = "BABONNR", displayName = "Bon", width = 60},
+
+                    new DataGridColumn{name = "INDAGNR", displayName = "Dag", width = 100},
+                    new DataGridColumn{name = "SOOMS", displayName = "Soort", width = 150},
+                    new DataGridColumn{name = "INOBJNR", displayName = "Object", width = 300},
+                    new DataGridColumn{name = "INUREN", displayName = "Uren", width = 60},
+                    new DataGridColumn{name = "INRAYON", displayName = "EW", width = 45},
+                    new DataGridColumn{name = "BASTATUS", displayName = " ", width = 40},
+                    new DataGridColumn{name = "DUMMY", displayName = " ", width = 1}
+
+            ], data = bonnenPdaArray as any[], editorBehaviors =[getAkkoordBon
+            ], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ], showButtonBar = true, showScrollbar = false, showCheckBoxes = true,
+
+            pageSize = 7, enableSorting = false, checkboxListeners =[meerdereBonnen
+            ]};
+    zoekGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 4, children =[
+                    zoekToggleButton, zoekmeerGrid, toggleGrid]};
+
+    zoekButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 7, verticalSpan = 2}, text = "<img src='images/zoek.png' border=0  width=37 height=37   style='cursor: hand;'  title='Zoek'> ", onClick ::= zoekButton_onClick};
+    AllesButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 8, verticalSpan = 2}, text = "<img src='images/alles.png' border=0  width=37 height=37   style='cursor: hand;'  title='Alles'> ", onClick ::= AllesButton_onClick};
+    objectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/object.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Objectgegevens'> ", onClick ::= ObjectButton_onClick};
+    MaterialenButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/materiaal.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Materialen en Middelen'> ", onClick ::= MaterialenButton_onClick};
+    postenButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/beurt.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Posten'> ", onClick ::= postenButton_onClick};
+    dagOpslaanButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 5}, text = "Opslaan dag", onClick ::= dagOpslaanButton_onClick};
+    firsttime boolean;
+    // progressbar image{layoutData = new GridLayoutData{row = 1, column = 6}, src = "images/ProgressBar.gif"};
+    // progressTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, text = "Gegevens worden opgehaald..", fontWeight = "bold", fontSize = "14"};
+    //  ToggleButton DojoRadioGroup{layoutData = new GridLayoutData{row = 1, column = 7}, onClick ::= ToggleButton_onClick, options =[
+    //                  "Scroll", "Knoppen"
+    //         ], vertical = true, selected = "Knoppen",
+    //           fontWeight = "bold"};
+    toggleGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 4}, cellPadding = 4, rows = 2, columns = 1, children =[
+                    knopButton, ScrollButton]};
+
+    startrij int;
+    ScrollButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, id = "scroll", text = "<img src='images/scrollbar.jpg' border=0  width=20 height=20   style='cursor: hand;'  title='Scrollbar'> ", onClick ::= ToggleButton_onClick};
+    knopButton DojoButton{layoutData = new GridLayoutData{row = 2, column = 1}, id = "button", text = "<img src='images/button.png' border=0  width=20 height=20   style='cursor: hand;'  title='Knoppen'> ", onClick ::= ToggleButton_onClick};
+    zoekmeerGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 2, columns = 8, children =[
+                    AllesButton, zoekButton, zoekObjectTextLabel,
+                    zoekObjectTextField, zoekStatusCombo, zoekSoortCombo,
+                    zoekWeekTextField, zoekBonTextField, zoekStatusTextLabel,
+                    zoekSoortTextLabel, zoekweekTextLabel, zoekBonTextLabel
+            ], borderStyle = "groove"};
+    zoekBonTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Bon", fontWeight = "bold"};
+    zoekweekTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 1}, text = "Week (jjjjww)", fontWeight = "bold"};
+
+    zoekBonTextField DojoTextField{layoutData = new GridLayoutData{row = 1, column = 2}, maxLength = 6, width = "60", fontWeight = "bold"};
+    zoekWeekTextField DojoTextField{layoutData = new GridLayoutData{row = 2, column = 2}, maxLength = 6, width = "60", fontWeight = "bold"};
+
+    zoekObjectTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 3}, text = "Object", fontWeight = "bold"};
+
+    zoekObjectTextField DojoTextField{layoutData = new GridLayoutData{row = 2, column = 4}, fontWeight = "bold", width = "200"};
+    zoekDagTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 5}, text = "Dag", fontWeight = "bold"};
+
+    zoekDagCombo Combo{layoutData = new GridLayoutData{row = 2, column = 6}, values =[
+                    "Maandag", "Dinsdag"], fontWeight = "bold", width = "100"};
+    zoekStatusCombo Combo{layoutData = new GridLayoutData{row = 1, column = 6}, values =[
+                    "Maak een keuze", "Openstaand", "Gereedgemeld", "Getekend"
+            ], fontWeight = "bold", width = "150"};
+    zoekStatusTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, text = "Status", fontWeight = "bold"};
+    zoekSoortTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, text = "Soort", fontWeight = "bold"};
+    zoekSoortCombo Combo{layoutData = new GridLayoutData{row = 1, column = 4}, fontWeight = "bold"};
+    zoekToggleButton image{layoutData = new GridLayoutData{row = 1, column = 1}, src = "images/zoek-button.png", width = "100", onClick ::= zoekToggleButton_onClick};
+    zoekAan boolean = false;
+
+    soortenWerk string[0];
+    HelpLink HyperLink{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img title='Help'  style='cursor: hand;' src='images/help.png' width=55, height=55>", href = "documenten/BonnenHelp.pdf", target = "_blank"};
+    
+    
+
+    function start()
+        firstTime = true;
+        initRui();
+
+    end
+
+    function getBonnen()
+        clearZoek();
+        msgTextLabel.text="";
+        zoekObjectTextField.text = "";
+        zoekBonTextField.text = "";
+        zoekWeekTextField.text = "";
+        zoekSoortCombo.selection = 1;
+        zoekStatusCombo.selection = 1;
+
+        bonnenPdaArray_ui.disabled = true;
+        werkUrenButton.disabled = true;
+        werkUrenButton.text = libraryVerloning.UREN_DIS_BUTTON;
+        tekenButton.disabled = true;
+        tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+        objectButton.disabled = true;
+        objectButton.text = libraryVerloning.OBJECT_DIS_BUTTON;
+        postenButton.disabled = true;
+        postenButton.text = libraryVerloning.POST_DIS_BUTTON;
+
+        searchInbaspf.BAUSERID = libraryVerloning.userid;
+
+        call dbService.getBonnenInfo(searchInbaspf, bonnenPdaArray,
+                soortenWerk) returning to fillBonnen onException fout;
+
+    end
+
+    function fout(exp AnyException in)
+        SysLib.writeStdout("Verbinding is verbroken. Sluit het programma af en start opnieuw!");
+    end
+
+    function zoekBon()
+        msgTextLabel.text = "";
+        libraryVerloning.zoeken = true;
+        searchInbaspf.BAUSERID = libraryVerloning.userid;
+
+        if(zoekObjectTextField.text != "")
+            searchInbaspf.INOBJECT = zoekObjectTextField.text;
+        else
+            searchInbaspf.INOBJECT = "";
+        end
+        libraryVerloning.zoekObject = zoekObjectTextField.text;
+
+        if(zoekBonTextField.text != "")
+            searchInbaspf.BABONNR = zoekBonTextField.text as int;
+
+        else
+            searchInbaspf.BABONNR = 0;
+        end
+        libraryVerloning.zoekBon = zoekBonTextField.text;
+        if(zoekSoortCombo.selection != 1)
+            searchInbaspf.SOORT = zoekSoortCombo.values[zoekSoortCombo.selection];
+
+        else
+            searchInbaspf.SOORT = "";
+        end
+        libraryVerloning.zoekSoort = zoekSoortCombo.selection;
+        if(zoekStatusCombo.selection != 1)
+            searchInbaspf.STATUS = zoekStatusCombo.selection;
+
+        else
+            searchInbaspf.STATUS = 0;
+        end
+        libraryVerloning.zoekStatus = zoekStatusCombo.selection;
+        if(zoekWeekTextField.text != "")
+            searchInbaspf.week = zoekWeekTextField.text as int;
+
+        else
+            searchInbaspf.week = 0;
+        end
+        libraryVerloning.zoekweek = zoekWeekTextField.text;
+
+        call dbService.zoekBonn(searchInbaspf, bonnenPdaArray)
+                returning to fillZoekBonnen;
+
+        //startrij = 1;
+    end
+
+    function fillBonnen(inbasInfArray inbasInfSQLrec[] in, soortenWerk string[] in, retResult string in)
+        bonnenPdaArray_ui.startrow = startrij;
+        bonnenPdaArray_ui.data = inbasInfArray as any[];
+        zoekSoortCombo.values = soortenwerk;
+        msgTextLabel.text = retResult;
+        bonnenPdaArray_ui.disabled = false;
+        bonnenPdaArray_ui.gotoPage(startrij);
+
+    end
+
+    function fillZoekBonnen(inbasInfArray inbasInfSQLrec[] in, retResult string in)
+        bonnenPdaArray_ui.startrow = startrij;
+        bonnenPdaArray_ui.data = inbasInfArray as any[];
+        msgTextLabel.text = retResult;
+        bonnenPdaArray_ui.disabled = false;
+        bonnenPdaArray_ui.gotoPage(startrij);
+
+    end
+
+    private function getAkkoordBon(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+        veld textlabel{};
+
+        case(column.name)
+            when("BASTATUS")
+                case(rowData.BASTATUS as int)
+                    when(0)
+                        return(new image{src = "images/uitvoering.jpg"});
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+                        return(new image{src = "images/Gereedgemeld.jpg"});
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                        return(new image{src = "images/gereed.jpg"});
+
+                end
+
+            when("INDAGNR")
+
+                dag Combo{values =["Onbekend", "Zondag", "Maandag", "Dinsdag",
+                                "Woensdag", "Donderdag", "Vrijdag", "Zaterdag"
+                        ], onChange ::= vulDagTabel, width = "100"};
+
+                case(rowData.INDAGNR as int)
+                    when(9)
+                        dag.selection = 1; //"Onbekend";
+                    when(1)
+                        dag.selection = 2; // "Zondag";
+                    when(2)
+                        dag.selection = 3; //"Maandag";
+                    when(3)
+                        dag.selection = 4; //"Dinsdag";
+                    when(4)
+                        dag.selection = 5; // "Woensdag";
+                    when(5)
+                        dag.selection = 6; // "Donderdag";
+                    when(6)
+                        dag.selection = 7; // "Vrijdag";
+                    when(7)
+                        dag.selection = 8; // = "Zaterdag";
+                
+                end
+                if(rowData.BASTATUS as int > 0)
+                    dag.disabled = true;
+                else
+                    dag.disabled = false;
+                end
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                return(dag);
+
+            when("INOBJNR")
+                // try
+                veld.text = rowData.INOBJNR as string + " " +
+                        rowData.INOBJECT as string + " " +
+                        rowData.INADRES as string + " " +
+                        rowData.INPOSTC as string + " " + rowData.INPLAATS;
+                // onException(exception AnyException)
+                // end
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                return(veld);
+            when("INADRES")
+
+                veld.text = rowData.INADRES as string + " " +
+                        rowData.INPOSTC as string + " " + rowData.INPLAATS;
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                return(veld);
+            when("INWEEKNR")
+                week string = rowData.INWEEKNR as string;
+                veld.text = week[1 : 4] + "-" + week[5 : 6];
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                return(veld);
+            when("INUREN")
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.INUREN as string) as string});
+            when("INRAYON")
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+                end
+                if(rowdata.INSRTBON as string == "E")
+
+                    if(rowData.INRAYON as int == 1)
+                        return(new image{width = 30, height = 30, src = "images/gereed.jpg"});
+                    else
+                        return(new image{width = 30, height = 30, src = "images/fout.jpg"});
+                    end
+                else
+                    return(new textlabel{text = ""});
+                end
+            otherwise
+                case(rowData.BASTATUS as int)
+                    when(1)
+                        cell.backgroundColor = "#ff8000";
+
+                    when(2)
+                        cell.backgroundColor = "#02ce9b";
+
+                end
+
+        end
+    end
+
+    function initRui()
+        ui.children =[zoekGrid, buttonGrid, msgTextLabel, bonnenPdaArray_ui,
+                ToggleGrid,helpLink];
+        dagenArray.removeAll();
+        dagOpslaanButton.visible = false;
+        werkUrenButton.disabled = true;
+        werkUrenButton.text = libraryVerloning.UREN_DIS_BUTTON;
+        tekenButton.disabled = true;
+        tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+        postenButton.disabled = true;
+        postenButton.text = libraryVerloning.POST_DIS_BUTTON;
+        objectButton.disabled = true;
+        objectButton.text = libraryVerloning.OBJECT_DIS_BUTTON;
+        MaterialenButton.disabled = true;
+        MaterialenButton.text = libraryVerloning.MAT_DIS_BUTTON;
+        if(Startrij == 0)
+            startrij = 1;
+        end
+        zoekmeerGrid.visible = false;
+        ScrollButton.visible = true;
+        knopButton.visible = false;
+    end
+
+    private function cellClicked(grid DataGrid in)
+
+        selectedrecord = bonnenPdaArray_ui.getSelection()[1] as inbasInfSQLrec;
+        werkUrenButton.disabled = false;
+        werkUrenButton.text = libraryVerloning.UREN_BUTTON;
+        tekenButton.disabled = false;
+        tekenButton.text = libraryVerloning.HAND_BUTTON;
+        postenButton.disabled = false;
+        postenButton.text = libraryVerloning.POST_BUTTON;
+        objectButton.disabled = false;
+        objectButton.text = libraryVerloning.OBJECT_BUTTON;
+        if(selectedrecord.INSRTBON == "E")
+            MaterialenButton.disabled = false;
+            MaterialenButton.text = libraryVerloning.MAT_BUTTON;
+            if(selectedrecord.INRAYON == 0)
+                tekenButton.disabled = true;
+                tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+            end
+        else
+
+            MaterialenButton.disabled = true;
+            MaterialenButton.text = libraryVerloning.MAT_DIS_BUTTON;
+        end
+        if(selectedrecord.BASTATUS != 0)
+        // tekenButton.disabled = true;
+        //  tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+        end
+        startRij = bonnenPdaArray_ui.getCurrentPageIndex();
+
+    end
+
+    function werkUrenButton_onClick(event Event in)
+        infobus.publish("WRK_BON", "");
+    end
+
+    function cancelButton_onClick(event Event in)
+        startrij = 1;
+        InfoBus.publish("KEUZEMENU", "");
+    end
+
+    function zoekButton_onClick(event Event in)
+        zoekBon();
+        startrij=1;
+    end
+
+    function AllesButton_onClick(event Event in)
+        startrij = 1;
+
+        getBonnen();
+    end
+
+    private function tekenButton_onClick(e Event in)
+
+        checked inbasInfSQLrec[] = bonnenPdaArray_ui.getchecked() as
+                        inbasInfSQLrec[];
+
+        bonnen boninfo[0];
+        bonrec boninfo;
+        if(checked.getSize() != 0)
+            for(i int from 1 to checked.getSize())
+
+                bonrec.bonnummer = checked[i].BABONNR as int;
+                bonrec.bonstatus = checked[i].BASTATUS as int;
+                bonrec.soortBon = checked[i].INSRTBON;
+                bonrec.object = checked[i].INOBJECT + " " +
+                        checked[i].INADRES as string + " " +
+                        checked[i].INPOSTC as string + " " +
+                        checked[i].INPLAATS;
+                bonnen.appendElement(bonrec);
+            end
+
+        else
+            bonrec.bonnummer = selectedrecord.BABONNR;
+            bonrec.bonstatus = selectedrecord.BASTATUS;
+            bonrec.soortBon = selectedrecord.INSRTBON;
+            bonrec.object = selectedrecord.INOBJECT + " " +
+                    selectedrecord.INADRES as string + " " +
+                    selectedrecord.INPOSTC as string + " " +
+                    selectedrecord.INPLAATS;
+            bonnen.appendElement(bonrec);
+        end
+        InfoBus.publish("TEKEN", bonnen);
+
+    end
+
+    private function vulDagTabel(e Event in)
+        dagOpslaanButton.text = libraryVerloning.SAVE_BUTTON;
+        dagOpslaanButton.visible = true;
+
+        for(i int from 1 to dagenArray.getsize())
+            if(dagenarray[i].INBONNR == selectedrecord.BABONNR)
+                dagenArray.removeElement(i);
+            end
+        end
+        dagRecord.INBONNR = selectedrecord.BABONNR;
+        case(e.widget.value)
+            when("Onbekend")
+                dagRecord.INDAGNR = 0;
+            when("Zondag")
+                dagRecord.INDAGNR = 1;
+            when("Maandag")
+                dagRecord.INDAGNR = 2;
+            when("Dinsdag")
+                dagRecord.INDAGNR = 3;
+            when("Woensdag")
+                dagRecord.INDAGNR = 4;
+            when("Donderdag")
+                dagRecord.INDAGNR = 5;
+            when("Vrijdag")
+                dagRecord.INDAGNR = 6;
+            when("Zaterdag")
+                dagRecord.INDAGNR = 7;
+
+        end
+        for(i int from 1 to bonnenPdaArray_ui.data.getSize())
+            if(bonnenPdaArray_ui.data[i].BABONNR as int == dagRecord.INBONNR)
+                bonnenPdaArray_ui.data[i].INDAGNR = dagRecord.INDAGNR;
+            end
+        end
+        dagenArray.appendElement(dagRecord);
+        bonnenPdaArray_ui.render();
+
+    end
+
+    function dagOpslaanButton_onClick(event Event in)
+        msgTextLabel.text = "";
+        dagOpslaanButton.disabled = true;
+        dagOpslaanButton.text = libraryVerloning.SAVE_DIS_BUTTON;
+        buttongrid.disabled = true;
+        startrij = bonnenPdaArray_ui.getCurrentPageIndex();
+        call dbService.updateDagen(dagenArray) returning to dagenOpgeslagen;
+    end
+
+    function dagenOpgeslagen(retResult string in)
+        dagOpslaanButton.visible = false;
+        dagOpslaanButton.disabled = false;
+        dagOpslaanButton.text = libraryVerloning.SAVE_BUTTON;
+        msgTextLabel.text = retResult;
+
+        getBonnen();
+        buttongrid.disabled = false;
+
+    end
+
+    private function ObjectButton_onClick(e Event in)
+
+        infobus.publish("DSP_OBJECT", selectedrecord);
+    end
+
+    function postenButton_onClick(event Event in)
+        InfoBus.publish("WRK_POSTEN", selectedrecord);
+    end
+
+    function MaterialenButton_onClick(event Event in)
+
+        InfoBus.publish("WRK_MATERIALEN", selectedrecord);
+    end
+
+    private function meerdereBonnen(grid DataGrid in)
+        msgTextLabel.text = "";
+        if(bonnenPdaArray_ui.getchecked().getSize() <= 20)
+
+            if(bonnenPdaArray_ui.getchecked().getSize() != 0)
+                tekenButton.disabled = false;
+                tekenButton.text = libraryVerloning.HAND_BUTTON;
+                for(i int from 1 to bonnenPdaArray_ui.getchecked().getsize())
+                    if(bonnenPdaArray_ui.getchecked()[i].INSRTBON as string ==
+                            "E")
+                        if(bonnenPdaArray_ui.getchecked()[i].INRAYON as int !=
+                                1)
+                            msgTextLabel.text = "EW bon niet volledig. Uren en/of materialen ontbreken!";
+                            tekenButton.disabled = true;
+                            tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+                        end	
+                    end
+
+                end
+
+            //tekenButton.disabled = false;
+            //tekenButton.text = libraryVerloning.HAND_BUTTON;
+            else
+                tekenButton.disabled = true;
+                tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+            end
+        else
+            msgTextLabel.text = "U kunt maximaal 20 bonnen tegelijk selecteren!";
+            tekenButton.disabled = true;
+            tekenButton.text = libraryVerloning.HAND_DIS_BUTTON;
+        end
+    end
+
+    function ToggleButton_onClick(event Event in)
+        bonnenPdaArray_ui.disabled = true;
+
+        if(event.widget.id == "scroll")
+            ScrollButton.visible = false;
+            knopButton.visible = true;
+            bonnenPdaArray_ui.showScrollbar = true;
+            bonnenPdaArray_ui.showButtonBar = false;
+        else
+            ScrollButton.visible = true;
+            knopButton.visible = false;
+
+            bonnenPdaArray_ui.showScrollbar = false;
+            bonnenPdaArray_ui.showButtonBar = true;
+        end
+        bonnenPdaArray_ui.render();
+        bonnenPdaArray_ui.disabled = false;
+    end
+
+    function zoekToggleButton_onClick(event Event in)
+        if(zoekaan)
+            zoekaan = false;
+            zoekmeerGrid.visible = false;
+            libraryVerloning.zoeken = false;
+            zoekToggleButton.src = "images/zoek-button.png";
+        else
+            zoekaan = true;
+            zoekmeerGrid.visible = true;
+            libraryVerloning.zoeken = true;
+            zoekToggleButton.src = "images/verberg-button.png";
+        end
+    end
+
+    function clearZoek()
+        zoekObjectTextField.text = "";
+        zoekBonTextField.text = "";
+        zoekWeekTextField.text = "";
+        zoekSoortCombo.selection = 1;
+        zoekStatusCombo.selection = 1;
+        //libraryVerloning.zoeken = false;
+        libraryVerloning.zoekbon = "";
+        libraryVerloning.zoekobject = "";
+        libraryVerloning.zoekweek = "";
+        libraryVerloning.zoekSoort = 1;
+        libraryVerloning.zoekStatus = 1;
+        //zoekToggleButton.src = "images/zoek-button.png";
+
+    end
+
+    function vulZoek()
+        zoekObjectTextField.text = libraryVerloning.zoekobject;
+        zoekBonTextField.text = libraryVerloning.zoekbon;
+        zoekWeekTextField.text = libraryVerloning.zoekweek;
+        zoekSoortCombo.selection = libraryVerloning.zoekSoort;
+        zoekStatusCombo.selection = libraryVerloning.zoekStatus;
+        zoekaan = true;
+        zoekmeerGrid.visible = true;
+        zoekToggleButton.src = "images/verberg-button.png";
+
+    end
+function onchange_zoekWeek(e Event in)
+    	week string;
+        if(zoekWeekTextField.text[5:5] != "-")
+        	week=zoekWeekTextField.text[1:4];
+        	
+			Week =week+ "-" + zoekWeekTextField.text[5:6];
+			zoekWeekTextField.text=week;
+        end
+    end
+end

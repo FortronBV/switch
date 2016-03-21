@@ -1,0 +1,149 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.bonweekstaatSQLRec;
+import dataVerloning.toonWeekstaten;
+import dataVerloning.weekstaatSQLrec;
+import dataVerloning.weekstaatWerkSQLRec;
+import dataVerloning.werkWeekstaten;
+import dojo.widgets.DojoButton;
+import services.SQLservice;
+
+//
+//
+handler werkenMetBon type RUIhandler {initialUI = [ ui ],onConstructionFunction = start, cssFile="css/fortron.verloning.website.rui.css", title="werkenMetBon"}
+	
+  //=============================================================================================================
+    // Grids, boxes etc.
+    //=============================================================================================================
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[
+                    buttonGrid, BonnummerTextLabel, weekstaatArray_ui,
+                    msgTextLabel]};
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    //records
+    //=============================================================================================================
+    weekstaatWerkSQLArray bonweekstaatSQLRec[0];
+    weekstaatArray weekstaatSQLrec[0];
+    selectedrecord toonWeekstaten;
+    //=============================================================================================================
+    //widgets
+    //=============================================================================================================
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, fontWeight = "bold", color = "#BABC1F"};
+    //=============================================================================================================
+    //variabelen
+    //=============================================================================================================
+    bonnummer int;
+    voorman string;
+    aantalAkkoord int;
+    aantalNietAkkoord int;
+    uren decimal(5, 2);
+    medew int;
+    weekstaten toonWeekstaten[0];
+    weekstaatrec toonWeekstaten;
+
+    werkweekstaat werkWeekstaten[0];
+    werkweekstaatrec werkWeekstaten;
+
+    weekstaatArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 2}, columns =[
+                    new DataGridColumn{name = "MedewNaam", displayName = "Medewerkernaam", width = 300},
+                    new DataGridColumn{name = "UrenTotaal", displayName = "Uren totaal", width = 120},
+                     new DataGridColumn{name = "UrenAkkoord", displayName = "Uren Akkoord", width = 120},
+                    new DataGridColumn{name = "Akkoord", displayName = "Akkoord", width = 80}
+            ], data = weekstaten as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ], editorBehaviors =[opmaakTabel]};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Terug", onClick ::= backButton_onClick};
+    bonnummerTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Bon:"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, cellPadding = 4, rows = 1, columns = 3, children =[
+                    selectButton, backButton]};
+    selectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Kies", onClick ::= selectButton_onClick};
+    //=============================================================================================================
+    //Main
+    //=============================================================================================================
+    
+    function start()
+    //getData();
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+        weekstaatArray_ui.disabled = true;
+        call db2Service.getBonWeekstaat(bonnummer, weekstaatWerkSQLArray)
+
+                returning to weekstaatRetrieved;
+    end
+
+    function weekstaatRetrieved(weekstaatWerkSQLArray bonweekstaatSQLRec[] in, retResult string in)
+        weekstaatRec toonWeekstaten;
+
+        weekstaten.removeAll();
+        werkweekstaat.removeAll();
+        gevonden boolean = false;
+        stop boolean = false;
+        try
+            for(i int from 1 to weekstaatWerkSQLArray.getsize())
+                // bestaat medewerker al in overzicht
+                    
+                    weekstaatrec.MedewId = weekstaatWerkSQLArray[i].IUMDWID;
+                    weekstaatrec.MedewNaam = weekstaatWerkSQLArray[i].IAMNAAM;
+                    weekstaatrec.UrenTotaal= weekstaatWerkSQLArray[i].IUGWKUREN ;
+                    weekstaatrec.UrenAkkoord= weekstaatWerkSQLArray[i].ACCWUREN;
+                    
+                    weekstaten.appendElement(weekstaatrec);
+
+            end
+        onException(exception AnyException)
+        end
+
+
+        weekstaatArray_ui.data = weekstaten as any[];
+        weekstaatArray_ui.disabled = false;
+        msgTextLabel.text = retresult;
+    end
+
+    function initRui()
+        msgTextLabel.text = "";
+    end
+
+    private function cellClicked(grid DataGrid in)
+        selectedRecord = weekstaatArray_ui.getSelection()[1] as toonWeekstaten;
+    end
+
+    function selectButton_onClick(event Event in)
+        infobus.publish("WEEKSTAAT_MEDEW", "");
+
+    end
+
+    function backButton_onClick(event Event in)
+        infobus.publish("SEL_WEEKSTAAT", "");
+    end
+
+    private function opmaakTabel(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+
+		  if(column.name == "Akkoord")
+			
+            if(rowData.Urentotaal  as decimal(5,2) == rowData.UrenAkkoord  as decimal(5,2))
+							
+                return(new image{src = "images/gereed.jpg" });
+                
+            else
+                return(new image{src = "images/nietakkoord.jpg" });
+                
+
+            end
+        end
+    end
+end

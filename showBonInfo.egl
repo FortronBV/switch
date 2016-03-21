@@ -1,0 +1,203 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+//import com.ibm.egl.rui.infobus.InfoBus;
+//import com.ibm.egl.rui.widgets.DataGrid;
+//import com.ibm.egl.rui.widgets.DataGridColumn;
+//import com.ibm.egl.rui.widgets.GridLayout;
+//import com.ibm.egl.rui.widgets.GridLayoutData;
+//import com.ibm.egl.rui.widgets.Image;
+//import com.ibm.egl.rui.widgets.TextArea;
+//import com.ibm.egl.rui.widgets.TextLabel;
+//import egl.ui.rui.Event;
+//import data.bonpostrecord;
+//import data.planDetailRec;
+//import data.searchPlanrec;
+//import dojo.widgets.DojoButton;
+//import libraries.formatData1;
+//import libraries.settings1;
+//import libraries.webSiteData;
+//import services.SQLservice;
+//import com.ibm.egl.rui.widgets.HyperLink;
+//
+////
+////
+//
+//handler showBonInfo type RUIhandler{initialUI =[ui
+//            ], onConstructionFunction = start, cssFile = "css/fortron.website2.0.rui.css", title = "showBonInfo"}
+//
+//    ui GridLayout{columns = 1, rows = 4, cellPadding = 4, children =[
+//                    buttonGrid, titelLabel, detailGrid
+//            ], backgroundColor = "AliceBlue", zIndex = 0, borderStyle = "groove", borderColor = "Blue", position = "relative", x = 0, y = 0};
+//
+//    detailGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 1}, cellPadding = 4, rows = 10, columns = 4, children =[
+//                    postInfoArray_ui, postLabel, opmerkingTextArea,
+//                    getekendDoorField, tijdField, handtekening, datumField,
+//                    weekField, bonField, statusField, opmerkingenLabel,
+//                    getekendDoorLabel, tijdLabel, handtekeningLabel,
+//                    datumUitgevoerdLabel, geplandeWeekLabel, bonLabel,
+//                    statusLabel
+//            ], borderStyle = "double", borderColor = "Blue"};
+//    postLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 4}, text = "Werkzaamheden", color = "CadetBlue", fontWeight = "bold"};
+//    statusLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 1}, text = "Status", color = "CadetBlue", fontWeight = "bold"};
+//    bonLabel TextLabel{layoutData = new GridLayoutData{row = 3, column = 1}, text = "Bonnummer", color = "CadetBlue", fontWeight = "bold"};
+//    geplandeWeekLabel TextLabel{layoutData = new GridLayoutData{row = 5, column = 1}, text = "Geplande week", color = "CadetBlue", fontWeight = "bold"};
+//    datumUitgevoerdLabel TextLabel{layoutData = new GridLayoutData{row = 6, column = 1}, text = "Datum uitgevoerd", color = "CadetBlue", fontWeight = "bold"};
+//    handtekeningLabel TextLabel{layoutData = new GridLayoutData{row = 7, column = 1}, text = "Handtekening", color = "CadetBlue", fontWeight = "bold"};
+//    tijdLabel TextLabel{layoutData = new GridLayoutData{row = 8, column = 1}, text = "Tijd", color = "CadetBlue", fontWeight = "bold"};
+//    getekendDoorLabel TextLabel{layoutData = new GridLayoutData{row = 9, column = 1}, text = "Afgetekend door", color = "CadetBlue", fontWeight = "bold"};
+//    opmerkingenLabel TextLabel{layoutData = new GridLayoutData{row = 10, column = 1}, text = "Opmerking", color = "CadetBlue", fontWeight = "bold"};
+//    postTextArea TextArea{layoutData = new GridLayoutData{row = 1, column = 4}, numRows = 3, numColumns = 50, disabled = true, fontWeight = "bolder"};
+//    beurtVanField TextLabel{layoutData = new GridLayoutData{row = 2, column = 4}, text = "xx van yy"};
+//    statusField TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, text = "TextLabel"};
+//    bonField TextLabel{layoutData = new GridLayoutData{row = 3, column = 2}, text = "TextLabel"};
+//    weekField TextLabel{layoutData = new GridLayoutData{row = 5, column = 2}, text = "TextLabel"};
+//    datumField TextLabel{layoutData = new GridLayoutData{row = 6, column = 2}, text = "TextLabel"};
+//    handtekening Image{layoutData = new GridLayoutData{row = 7, column = 2}};
+//    tijdField TextLabel{layoutData = new GridLayoutData{row = 8, column = 2}, text = "TextLabel"};
+//    getekendDoorField TextLabel{layoutData = new GridLayoutData{row = 9, column = 2}, text = "TextLabel"};
+//    opmerkingTextArea TextArea{layoutData = new GridLayoutData{row = 10, column = 2}, numColumns = 50, numRows = 5, disabled = false, readOnly = true};
+//
+//    dbService SQLService{@DedicatedService};
+//    planDetailrec planDetailRec;
+//    searchPlanrec searchPlanrec;
+//    titelLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Detailgegevens bon", color = "Blue", fontWeight = "bold", fontSize = "14"};
+//    cancelButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Annuleren", onClick ::= cancelButton_onClick};
+//    loadGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 1}, cellPadding = 4, rows = 1, columns = 2, children =[
+//                    TextLabel, Image]};
+//    Image Image{src = "images/loading3.gif", layoutData = new GridLayoutData{row = 1, column = 1}};
+//    TextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Even geduld a.u.b...De gegevens worden opgehaald", fontSize = "14", color = "FireBrick", fontWeight = "bold"};
+//    postInfoArray bonpostrecord[];
+//
+//    postInfoArray_ui DataGrid{layoutData = new GridLayoutData{row = 2, column = 4, verticalSpan = 9}, columns =[
+//                    new DataGridColumn{name = "PSPST", displayName = "Post", width = 50},
+//                    new DataGridColumn{name = "PMOMS", displayName = "Omschrijving", width = 400}
+//
+//            ], data = postInfoArray as any[]};
+//    bonnummer int;
+//    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 2, column = 1}, cellPadding = 4, rows = 1, columns = 2, children =[
+//                    printHyperLink, cancelButton]};
+//    printHyperLink HyperLink{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Print versie", target = "_blank"};
+//    //printButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Printversie", onClick ::= printButton_onClick};
+//    urlString string;
+//
+//    function start()
+//
+//            end
+//
+//    function getPlanDetail()
+////        searchPlanrec.orderNumber = 12445;
+////        searchPlanrec.postNumber = 1;
+////        searchPlanrec.weekNumber = 9;
+////        searchPlanrec.beurtyear = 2011;
+//
+//        bonnummer = searchPlanrec.bonNumber;
+//        getUrl();
+//        
+//        detailGrid.visible = false;
+//        ui.appendChild(loadGrid);
+//        call dbService.getDetailBon(bonnummer) returning to fillPlanningRecord
+//                onException serviceLib.serviceExceptionHandler;
+//        call dbService.getPostInfo(bonnummer) returning to fillPostRecord
+//                onException serviceLib.serviceExceptionHandler;
+//
+//    end
+//
+//    function fillPlanningRecord(bonnummer int in, retResult planDetailrec in)
+//        postTextArea.text = retResult.PMOMS;
+//        beurtVanField.text = "" + retResult.BTBNR + " van " + retResult.PSBPJ;
+//        statusField.text = getStatus(retResult.BPSTATUS);
+//        weekField.text = "" + retResult.btgpw + "/" + retResult.BTBJR;
+//        if(retResult.BTBON != 0)
+//            bonField.visible = true;
+//            bonLabel.visible = true;
+//            bonField.text = retResult.BTBON as string;
+//
+//        else
+//            bonField.visible = false;
+//            bonLabel.visible = false;
+//        end
+//
+//        datumField.visible = true;
+//        datumField.text = formatData1.dateFormatter(retresult.BGDATUM as string);
+//        datumUitgevoerdLabel.visible = true;
+//        tijdField.visible = true;
+//        tijdField.text = retResult.BGTIJD as string;
+//        tijdLabel.visible = true;
+//        getekendDoorField.visible = true;
+//        getekendDoorField.text = retResult.BGNAAM;
+//        getekendDoorLabel.visible = true;
+//        handtekening.src = settings1.handtekeningPath +
+//                retResult.BGBONNR as string + ".jpg";
+//        // get posten
+//        
+//        if(retResult.BGOPMERK != "")
+//            opmerkingenLabel.visible = true;
+//            opmerkingTextArea.visible = true;
+//            opmerkingTextArea.text = retResult.BGOPMERK;
+//        else
+//            opmerkingenLabel.visible = false;
+//            opmerkingTextArea.visible = false;
+//        end
+//        if(retResult.BGNAAM != "")
+//            handtekeningLabel.visible = true;
+//            handtekening.visible = true;
+//        else
+//            handtekeningLabel.visible = false;
+//            handtekening.visible = false;
+//        end
+//
+//        detailGrid.visible = true;
+//        ui.removeChild(loadGrid);
+//
+//    end
+//
+//    function fillPostRecord(bonnummer int in, retResult bonpostrecord[] in)
+//        if(retResult.getSize() != 0)
+//
+//            postInfoArray_ui.data = retResult as any[];
+//        end
+//    end
+//
+//    function getStatus(stat string in) returns(string)
+//        status string;
+//        case(stat)
+//            when("H")
+//                status = "Getekend";
+//            when("P")
+//                status = "Gepland";
+//            when("N")
+//                status = "Gepland";
+//            when("U")
+//                status = "Gereed gemeld";
+//            when("D")
+//                status = "Definitief gepland";
+//            otherwise
+//                status = "";
+//
+//        end
+//        return(status);
+//
+//    end
+//
+//    function cancelButton_onClick(event Event in)
+//        InfoBus.publish("SHOWPLANNING_SHOWPLANNING", searchPlanrec);
+//    end
+//
+//    function getUrl()
+//        urlOrgString string = document.location;
+//        // bepaal URL 
+//        startIndex int = strlib.indexOf(urlORgString, "logonWindow");
+//        urlString = urlOrgstring[1 : startIndex - 1] +
+//                "printBonInfo-en_US.html?order=" +
+//                searchPlanrec.orderNumber as string + "&post=" +
+//                searchPlanrec.postNumber as string + "&week=" +
+//                searchPlanrec.weekNumber as string + "&jaar=" +
+//                searchPlanrec.beurtyear as string + "&bon=" +
+//                searchPlanrec.bonNumber as string + "&object=" + webSiteData.objectDescription;
+//			printHyperLink.href= urlString;
+//    end
+//
+//end
+

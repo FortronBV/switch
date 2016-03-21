@@ -1,0 +1,497 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.Image;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inbnurpfSQLrec;
+import dataVerloning.inbnurpfSQLrec2;
+import dataVerloning.inbyzupfSQLrec;
+import dataVerloning.urenPerMedewerker;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoCheckBox;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.addRecord;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler werkenMetUrenMedewerker type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "werkenMetUrenMedewerker"}
+
+    ui GridLayout{columns = 3, rows = 6, cellPadding = 4, children =[CheckBox,
+                    TotaalUrenTextLabel, WeeknrTextLabel, medewerkerArray_ui,
+                    buttonGrid, msgTextLabel]};
+
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    //=============================================================================================================
+    //records
+    //=============================================================================================================
+    urenRec inbnurpfSQLrec;
+    urenBijzrec inbyzupfSQLrec;
+    urenArray inbnurpfSQLrec2[0];
+    urenBijzArray inbyzupfSQLrec[0];
+    selectedrecord urenPerMedewerker;
+    selectedArray urenPerMedewerker[0];
+    medewerkerArray urenPerMedewerker[0];
+    medewerkerRec urenPerMedewerker;
+    //=============================================================================================================
+    //widgets
+    //=============================================================================================================
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 6, column = 2}, fontWeight = "bold", color = "#BABC1F"};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 5}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    WeeknrTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Weeknr:"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 5, column = 2}, cellPadding = 4, rows = 1, columns = 5, children =[
+                    backButton, deleteButton, akkoordButton, selectButton,
+                    addButton]};
+    selectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/upd.png' border=0  width=47 height=47   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= selectButton_onClick};
+
+    deleteButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/del.png' border=0  width=47 height=47   style='cursor: hand;'  title='Verwijderen'> ", onClick ::= deleteButton_onClick};
+    addButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/add.png' border=0  width=47 height=47   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= addButton_onClick};
+    //=============================================================================================================
+    //variabelen
+    //=============================================================================================================
+    medewerker int;
+    weeknummer int;
+
+    medewerkerArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 2}, columns =[
+                    //new DataGridColumn{name = "MDWNAAM", displayName = "Medewerkernaam", width = 120},
+                    new DataGridColumn{name = "Dag", displayName = "Dag", width = 80},
+                    new DataGridColumn{name = "Voorman", displayName = "Voorman", width = 100},
+                    new DataGridColumn{name = "BONNR", displayName = "Bon", width = 80},
+                    new DataGridColumn{name = "Object", displayName = "Object", width = 250},
+                    new DataGridColumn{name = "Uren", displayName = "Uren", width = 70},
+                    new DataGridColumn{name = "Van", displayName = "Van", width = 70},
+                    new DataGridColumn{name = "Tot", displayName = "Tot", width = 70},
+                    new DataGridColumn{name = "Soort", displayName = "Soort", width = 90},
+                    new DataGridColumn{name = "Akkoord", displayName = "Akk.", width = 50},
+                    new DataGridColumn{name = "DUMMY", displayName = "", width = 1}
+                    
+                    
+            ], editorBehaviors =[getAkkoordBon
+            ], data = medewerkerArray as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ], showCheckBoxes = true, checkboxListeners =[checkboxListener]};
+
+    akkoordButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/accoord.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Accorderen'> ", onClick ::= akkoordButton_onClick};
+    TotaalUrenTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, text = "Totaal uren: ", fontWeight = "bold"};
+    totaaluren decimal(9, 2);
+    totaalAkkoord decimal(9, 2);
+    voorman string;
+    arrayOk any[0];
+    urenAkkrec urenPerMedewerker;
+    CheckBox DojoCheckBox{layoutData = new GridLayoutData{row = 2, column = 2}, text = "Selecteer alles", selected = false, onChange ::= checkbox_change};
+
+    function start()
+
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+        medewerkerArray_ui.disabled = true;
+
+        call db2Service.getWeekstaatMedew(voorman, medewerker, weeknummer,
+                urenArray, urenBijzArray)
+
+                returning to weekstaatRetrieved1;
+    end
+
+    function weekstaatRetrieved1(urenArray inbnurpfSQLrec2[] in, urenBijzArray inbyzupfSQLrec[] in, retResult string in)
+        medewerkerArray_ui.startRow = 1;
+        medewerkerArray.removeAll();
+        totaaluren = 0;
+        totaalakkoord = 0;
+        for(i int from 1 to urenArray.getSize())
+            medewerkerRec.MDWID = urenArray[i].IUMDWID;
+            medewerkerRec.userid = urenArray[i].AUUSERID;
+            medewerkerRec.voorman = urenArray[i].AUOMS;
+            medewerkerRec.MDWNAAM = urenArray[i].IAMNAAM;
+            medewerkerRec.BONNR = urenArray[i].IUBONNR;
+            medewerkerRec.WEEKNR = urenArray[i].IUWEEKNR;
+            medewerkerRec.DAG = urenArray[i].IUDAG as string;
+            //            case(urenArray[i].IUDAG)
+            //                when("zo")
+            //                    medewerkerRec.DAG = "1";
+            //                when("ma")
+            //                    medewerkerRec.DAG = "2";
+            //                when("di")
+            //                    medewerkerRec.DAG = "3";
+            //                when("wo")
+            //                    medewerkerRec.DAG = "4";
+            //                when("do")
+            //                    medewerkerRec.DAG = "5";
+            //                when("vr")
+            //                    medewerkerRec.DAG = "6";
+            //                when("za")
+            //                    medewerkerRec.DAG = "7";
+            //
+            //            end
+            
+            medewerkerRec.VAn = urenArray[i].IUVAN;
+            medewerkerRec.tot = urenArray[i].IUTOT;
+            medewerkerRec.UREN = urenArray[i].IUGWKUREN;
+            medewerkerRec.AKKOORD = urenArray[i].IUURAKK;
+            medewerkerRec.VOLGNR = urenArray[i].IUVOLGNR;
+
+            medewerkerRec.Soort = urenArray[i].IUSOORT;
+
+            medewerkerRec.Object = urenArray[i].OAOMSCHR + " " +
+                    urenArray[i].OASTraat as string + " " +
+                    urenArray[i].OAHUISNR as string + " " +
+                    urenArray[i].OAHUISNT as string + " " +
+                    urenArray[i].OAPOSTCA as string + " " +
+                    urenArray[i].OAPOSTCN as string + " " +
+                    urenArray[i].OAPLAATS as string;
+
+            medewerkerArray.appendElement(medewerkerRec);
+            totaaluren = totaaluren + medewerkerRec.UREN;
+            if(medewerkerRec.AKKOORD == "J")
+                totaalAkkoord = totaalakkoord + medewerkerRec.UREN;
+
+            end
+        end
+        for(i int from 1 to urenBijzArray.getSize())
+            medewerkerRec.Object = "";
+            medewerkerRec.MDWID = urenBijzArray[i].IBMDWID;
+            medewerkerRec.userid = urenBijzArray[i].AUUSERID;
+            medewerkerRec.voorman = urenBijzArray[i].AUOMS;
+
+            medewerkerRec.MDWNAAM = urenBijzArray[i].IAMNAAM;
+            medewerkerRec.BONNR = 0;
+            medewerkerRec.WEEKNR = urenBijzArray[i].IBWEEKNR;
+            case(urenBijzArray[i].IBDAG)
+                when("zo")
+                    medewerkerRec.DAG = "7";
+                when("ma")
+                    medewerkerRec.DAG = "1";
+                when("di")
+                    medewerkerRec.DAG = "2";
+                when("wo")
+                    medewerkerRec.DAG = "3";
+                when("do")
+                    medewerkerRec.DAG = "4";
+                when("vr")
+                    medewerkerRec.DAG = "5";
+                when("za")
+                    medewerkerRec.DAG = "6";
+
+            end
+
+            medewerkerRec.UREN = urenBijzArray[i].IBAANTAL;
+            medewerkerRec.AKKOORD = urenBijzArray[i].IBURAKK;
+            medewerkerRec.Soort = urenBijzArray[i].IBCOCO;
+            medewerkerRec.VAn = "00:00:00" as time;
+            medewerkerRec.tot = "00:00:00" as time;
+            medewerkerRec.VOLGNR = urenBijzArray[i].IBVOLGNR;
+            medewerkerArray.appendElement(medewerkerRec);
+            totaaluren = totaaluren + medewerkerRec.UREN;
+            if(medewerkerRec.AKKOORD == "J")
+                totaalAkkoord = totaalakkoord + medewerkerRec.UREN;
+
+            end
+        end
+        medewerkerArray_ui.data = medewerkerArray as any[];
+        medewerkerArray_ui.disabled = false;
+        TotaalUrenTextLabel.text = "Totaal uren :" +
+                ruiFunctions.numberReturnComma(totaaluren as string) +
+                " Geaccordeerd: " +
+                ruiFunctions.numberReturnComma(totaalAkkoord as string);
+    end
+
+    function weekstaatRetrieved(medewerkerArray inbnurpfSQLrec[] in, retResult string in)
+        medewerkerArray_ui.data = medewerkerArray as any[];
+        medewerkerArray_ui.disabled = false;
+    end
+
+    private function cellClicked(grid DataGrid in)
+        selectedRecord = medewerkerArray_ui.getSelection()[1] as
+                urenPerMedewerker;
+
+        if(selectedrecord.AKKOORD == "N")
+            selectbutton.disabled = false;
+            selectbutton.text = libraryVerloning.UPD_BUTTON;
+            deletebutton.text = libraryVerloning.DEL_BUTTON;
+            deleteButton.disabled = false;
+        else
+            selectbutton.disabled = true;
+            selectbutton.text = libraryVerloning.UPD_DIS_BUTTON;
+
+            deleteButton.disabled = true;
+            deletebutton.text = libraryVerloning.DEL_DIS_BUTTON;
+        end
+        if(selectedrecord.Userid != voorman)
+            selectbutton.disabled = true;
+            selectbutton.text = libraryVerloning.UPD_DIS_BUTTON;
+
+            deleteButton.disabled = true;
+            deletebutton.text = libraryVerloning.DEL_DIS_BUTTON;
+
+        end
+
+    end
+
+    function selectButton_onClick(event Event in)
+        case(selectedrecord.soort)
+            when("W")
+                infobus.publish("UREN_MEDEW", "");
+            when("O")
+                infobus.publish("UREN_MEDEW", "");
+            when("B")
+                infobus.publish("UREN_MEDEW", "");
+            otherwise
+                infobus.publish("BIJZ_UREN_MEDEW", "");
+        end
+    end
+
+    function backButton_onClick(event Event in)
+        infobus.publish("WRK_WEEKSTATEN", "");
+    end
+
+    function akkoordButton_onClick(event Event in)
+        accUrenArray inbnurpfSQLRec[0];
+        ACCbijzUrenArray inbyzupfSQLrec[0];
+        accUrenRec inbnurpfSQLRec;
+        ACCbijzUrenRec inbyzupfSQLrec;
+
+        for(i int from 1 to medewerkerArray_ui.getChecked().getSize())
+            if(medewerkerArray_ui.getChecked()[i].BoNNR as int != 0 and
+                    medewerkerArray_ui.getChecked()[i].Userid as string ==
+                            voorman)
+                case(medewerkerArray_ui.getchecked()[i].DAG as string)
+                    when("7")
+                        ACCUrenRec.IUDAG = "zo";
+                    when("1")
+                        ACCUrenRec.IUDAG = "ma";
+                    when("2")
+                        ACCUrenRec.IUDAG = "di";
+                    when("3")
+                        ACCUrenRec.IUDAG = "wo";
+                    when("4")
+                        ACCUrenRec.IUDAG = "do";
+                    when("5")
+                        ACCUrenRec.IUDAG = "vr";
+                    when("6")
+                        ACCUrenRec.IUDAG = "za";
+
+                end
+
+                accurenRec.IUBONNR = medewerkerArray_ui.getChecked()[i].BoNNR;
+                accurenRec.IUVOLGNR = medewerkerArray_ui.getchecked()[i].VOLGNR;
+
+                accurenRec.IUMDWID = medewerkerArray_ui.getchecked()[i].MDWID;
+                accurenRec.IUURAKK = "J";
+                accurenRec.IUWEEKNR = medewerkerArray_ui.getchecked()[i].Weeknr;
+                accUrenArray.appendElement(accurenrec);
+            else
+                case(medewerkerArray_ui.getchecked()[i].DAG as string)
+                    when("7")
+                        ACCbijzUrenRec.IBDAG = "zo";
+                    when("1")
+                        ACCbijzUrenRec.IBDAG = "ma";
+                    when("2")
+                        ACCbijzUrenRec.IBDAG = "di";
+                    when("3")
+                        ACCbijzUrenRec.IBDAG = "wo";
+                    when("4")
+                        ACCbijzUrenRec.IBDAG = "do";
+                    when("5")
+                        ACCbijzUrenRec.IBDAG = "vr";
+                    when("6")
+                        ACCbijzUrenRec.IBDAG = "za";
+
+                end
+
+                ACCbijzUrenRec.IBMDWID = medewerkerArray_ui.getchecked()[i].MDWID;
+
+                ACCbijzUrenRec.IBVOLGNR = medewerkerArray_ui.getchecked()[i].VOLGNR;
+                ACCbijzUrenRec.IBWEEKNR = medewerkerArray_ui.getchecked()[i].Weeknr;
+                ACCbijzUrenRec.IBURAKK = "J";
+                accBijzUrenArray.appendElement(accBijzurenrec);
+
+            end
+        end
+        call db2Service.accUrendetail(accUrenArray, ACCbijzUrenArray)
+
+                returning to urenAccoord;
+    end
+
+    function urenAccoord(retResult string in)
+        getdata();
+        akkoordButton.disabled = true;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+    end
+
+    function getAkkoordBon(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+        case(column.name)
+            when("Uren")
+
+                return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.Uren as string) as string});
+            when("Akkoord")
+
+                if(rowData.Akkoord as string == "J")
+
+                    return(new image{src = "images/gereed.jpg"});
+
+                else
+                    return(new image{src = "images/nietakkoord.jpg"});
+
+                end
+            when("Soort")
+
+                case(rowData.Soort as string)
+                    when("W")
+
+                        return(new textlabel{text = "Werk"});
+                    when("O")
+
+                        return(new textlabel{text = "Reis onder werktijd"});
+                    when("B")
+
+                        return(new textlabel{text = "Reis buiten werktijd"});
+                    otherwise
+
+                        return(new textlabel{text = libraryVerloning.zoekKompCodeOmschr(rowData.Soort as string)});
+
+                end
+
+            when("BONNR")
+
+                if(rowData.BONNR as int == 0)
+                    return(new textlabel{text = ""});
+                end
+            when("Van")
+                if(rowData.bonnr as int != 0)
+                        tijd string = rowData.van as string;
+                        return(new textlabel{text = tijd[1 : 5]});
+                   
+
+                else
+                    return(new textlabel{text = ""});
+                end
+            when("Tot")
+                if(rowData.bonnr as int != 0)
+                    if(rowData.tot as time == "23:59:00")
+                        return(new textlabel{text = "24:00"});
+                    else
+                        tijd string = rowData.Tot as string;
+                        return(new textlabel{text = tijd[1 : 5]});
+                    end
+                else
+                    return(new textlabel{text = ""});
+                end
+            when("Dag")
+                dag string;
+                case(rowData.dag as string)
+                    when("7")
+                        DAG = "Zondag";
+                    when("1")
+                        DAG = "Maandag";
+                    when("2")
+                        DAG = "Dinsdag";
+                    when("3")
+                        DAG = "Woensdag";
+                    when("4")
+                        DAG = "Donderdag";
+                    when("5")
+                        DAG = "Vrijdag";
+                    when("6")
+                        DAG = "Zaterdag";
+
+                end
+                return(new textlabel{text = dag});
+
+        end
+    end
+
+    function initRui()
+        deleteButton.disabled = true;
+        akkoordButton.disabled = true;
+        selectbutton.disabled = true;
+        deletebutton.text = libraryVerloning.DEL_DIS_BUTTON;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+        selectbutton.text = libraryVerloning.UPD_DIS_BUTTON;
+        CheckBox.selected = false;
+        checkBox.text = "Selecteer alles";
+    end
+
+    private function deleteButton_onClick(e Event in)
+
+        case(selectedrecord.soort)
+            when("W")
+                infobus.publish("DEL_UREN_MEDEW", "");
+            when("O")
+                infobus.publish("DEL_UREN_MEDEW", "");
+            when("B")
+                infobus.publish("DEL_UREN_MEDEW", "");
+            otherwise
+                infobus.publish("DEL_BIJZ_UREN_MEDEW", "");
+        end
+    end
+
+    private function addButton_onClick(e Event in)
+        addRecord addRecord;
+        addrecord.week = weeknummer;
+        addrecord.mdw = medewerker;
+
+        infobus.publish("ADD_BIJZ_UREN_MEDEW", addrecord);
+
+    end
+
+    private function checkboxListener(grid DataGrid in)
+        selectedArray = medewerkerArray_ui.getChecked() as urenPerMedewerker[];
+
+        //arrayOk.removeAll();
+        akkoordButton.disabled = true;
+        akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+
+        for(i int from 1 to selectedArray.getsize())
+
+            if(selectedArray[i].AKKOORD == "N" and selectedArray[i].Userid ==
+                            voorman)
+
+                akkoordButton.disabled = false;
+
+            //urenAkkrec=selectedArray[i];
+            //arrayOk.appendElement(urenAkkRec);
+            end
+
+        end
+
+        if(selectedArray.getsize() != 0 and akkoordButton.disabled == false)
+
+            akkoordbutton.text = libraryVerloning.ACC_BUTTON;
+
+        else
+            akkoordButton.disabled = true;
+            akkoordbutton.text = libraryVerloning.ACC_DIS_BUTTON;
+
+        end
+        // medewerkerArray_ui.uncheckAll();
+        //medewerkerArray_ui.setChecked(arrayOk as any[]);
+        
+    end
+
+    function checkbox_change(event Event in)
+
+        if(CheckBox.selected)
+            medewerkerArray_ui.checkAll();
+            CheckBox.text = "Selecteer niets";
+        else
+            medewerkerArray_ui.uncheckAll();
+            CheckBox.text = "Selecteer alles";
+        end
+    end
+end

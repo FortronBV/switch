@@ -1,0 +1,115 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.HyperLink;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inbnmmpfSQLrec;
+import dojo.widgets.DojoButton;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler werkenMetMaterialen type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "werkenMetMaterialen"}
+
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[
+                    HelpLink, infoTextLabel, BonnummerTextLabel, buttonGrid,
+                    materialenArray_ui]};
+    materialenArray inbnmmpfSQLrec[0];
+    selectedRecord inbnmmpfSQLrec;
+    db2Service SQLservice{@DedicatedService};
+    materialenArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 2}, columns =[
+                    new DataGridColumn{name = "IMAANT", displayName = "Aantal", width = 100},
+                    new DataGridColumn{name = "IMEENH", displayName = "Eenheid", width = 100},
+                    new DataGridColumn{name = "IMOMSCHR", displayName = "Omschrijving", width = 300}
+
+            ], editorBehaviors =[editLijst
+            ], data = materialenArray as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ]};
+            
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 2}, cellPadding = 4, rows = 1, columns = 5, children =[
+                    backButton, deleteButton, selectButton, addButton]};
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 4, column = 2}, fontWeight = "bold", color = "Blue"};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    BonnummerTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}, text = "Bonnummer:"};
+    selectButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/upd.png' border=0  width=47 height=47   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= selectButton_onClick};
+    deleteButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text =  "<img src='images/del.png' border=0  width=47 height=47   style='cursor: hand;'  title='Verwijderen'> ", onClick ::= deleteButton_onClick};
+    addButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text =  "<img src='images/add.png' border=0  width=47 height=47   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= addButton_onClick};
+    infoTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Werken met materialen/middelen per bon.", fontWeight = "bold"};
+    bonnummer int;
+   
+	 HelpLink HyperLink{layoutData = new GridLayoutData{row = 2, column = 3}, text = "<img title='Help'  style='cursor: hand;' src='images/help.png' width=55, height=55>", href = "documenten/MatHelp.pdf", target = "_blank"};
+    function start()
+
+    end
+
+    function getdata()
+        msgTextLabel.text = "";
+        materialenArray_ui.disabled = true;
+        call db2Service.getMaterialenPerBon(bonnummer, materialenArray)
+                returning to materialenRetrieved;
+
+    end
+
+    function materialenRetrieved(materialenArray inbnmmpfSQLrec[] in, retResult string in)
+        msgTextLabel.text = retresult;
+        materialenArray_ui.data = materialenArray as any[];
+        materialenArray_ui.disabled = false;
+    end
+
+    function initRui()
+        deleteButton.disabled = true;
+        deletebutton.text=libraryVerloning.DEL_DIS_BUTTON;
+        selectbutton.text=libraryVerloning.UPD_DIS_BUTTON;
+        
+        selectButton.disabled = true;
+        BonnummerTextLabel.text = "Bonnummer: " + bonnummer as string;
+
+    end
+
+    private function cellClicked(grid DataGrid in)
+        selectedRecord = materialenArray_ui.getSelection()[1] as
+                inbnmmpfSQLrec;
+
+        selectButton.disabled = false;
+        selectbutton.text=libraryVerloning.UPD_BUTTON;
+        deletebutton.disabled = false;
+        deletebutton.text=libraryVerloning.DEL_BUTTON;
+    end
+
+    private function backButton_onClick(e Event in)
+        infobus.publish("SEL_BONNEN_REF", "");
+    end
+
+    private function selectButton_onClick(e Event in)
+        infobus.publish("UPD_MAT", selectedrecord);
+    end
+
+    private function deleteButton_onClick(e Event in)
+        infobus.publish("DEL_MAT", selectedrecord);
+    end
+
+    private function addButton_onClick(e Event in)
+        infobus.publish("ADD_MAT", selectedrecord);
+    end
+
+    private function editLijst(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+        if(column.name == "IMAANT")
+
+            return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.IMAANT as string) as string});
+        end
+    end
+end

@@ -1,0 +1,405 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.mvc.Controller;
+import com.ibm.egl.rui.mvc.FormField;
+import com.ibm.egl.rui.mvc.FormManager;
+import com.ibm.egl.rui.mvc.MVC;
+import com.ibm.egl.rui.widgets.Combo;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataVerloning.inbyzupfRec;
+import dataVerloning.inbyzupfSQLrec;
+import dataVerloning.searchInbyzupf;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoComboBox;
+import dojo.widgets.DojoTextArea;
+import dojo.widgets.DojoTextField;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler detailBijzondereUren type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website.rui.css", title = "detailBijzondereUren"}
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4};
+    inbyzupfSQLrec inbyzupfSQLrec;
+    urenArray inbyzupfSQLrec[];
+    urenPerMedeWerker inbyzupfSQLrec[0];
+    inbyzupfSQLrec_ui GridLayout{layoutData = new GridLayoutData{row = 2, column = 2}, rows = 7, columns = 2, cellPadding = 4, children =[
+                    inbyzupfSQLrec_IBMDWID_nameLabel,
+                    inbyzupfSQLrec_IBMDWID_field,
+                    inbyzupfSQLrec_IBWEEKNR_nameLabel,
+                    inbyzupfSQLrec_IBWEEKNR_field,
+                    inbyzupfSQLrec_IBDAG_nameLabel,
+                    inbyzupfSQLrec_IBDAG_comboBox,
+                    inbyzupfSQLrec_IBAANTAL_nameLabel,
+                    inbyzupfSQLrec_IBAANTAL_field,
+                    inbyzupfSQLrec_IBCOCO_nameLabel,
+                    inbyzupfSQLrec_IBCOCO_comboBox,
+                    inbyzupfSQLrec_IBOPM_nameLabel, inbyzupfSQLrec_IBOPM_area
+            ],fontSize = "24"};
+
+    inbyzupfSQLrec_IBMDWID_nameLabel TextLabel{text = "Medewerker", layoutData = new GridLayoutData{row = 1, column = 1}};
+    inbyzupfSQLrec_IBMDWID_field Combo{layoutData = new GridLayoutData{row = 1, column = 2}, onChange ::= inbyzupfSQLrec_IBMDWID_field_onChange, width="300" ,height="40",fontSize = "24"};
+
+    inbyzupfSQLrec_IBWEEKNR_nameLabel TextLabel{text = "Weeknummer", layoutData = new GridLayoutData{row = 2, column = 1},fontSize = "24"};
+    inbyzupfSQLrec_IBWEEKNR_field DojoTextField{layoutData = new GridLayoutData{row = 2, column = 2}, maxlength = 6, width = "120", height="40",fontSize = "24"};
+
+    inbyzupfSQLrec_IBDAG_nameLabel TextLabel{text = "Dag", layoutData = new GridLayoutData{row = 3, column = 1}};
+    inbyzupfSQLrec_IBDAG_comboBox Combo{values =["Maak een keuze", "Maandag",
+                    "Dinsdag", "Woensdag", "Donderdag", "Vrijdag", "Zaterdag", "Zondag"
+            ], layoutData = new GridLayoutData{row = 3, column = 2}, height="40",fontSize = "24"};
+
+    inbyzupfSQLrec_IBAANTAL_nameLabel TextLabel{text = "Uren", layoutData = new GridLayoutData{row = 4, column = 1}};
+    inbyzupfSQLrec_IBAANTAL_field DojoTextField{layoutData = new GridLayoutData{row = 4, column = 2}, width = "100", height="40",fontSize = "24"};
+
+    inbyzupfSQLrec_IBCOCO_nameLabel TextLabel{text = "Soort", layoutData = new GridLayoutData{row = 5, column = 1}};
+    inbyzupfSQLrec_IBCOCO_comboBox Combo{layoutData = new GridLayoutData{row = 5, column = 2},width = "300", height="40",fontSize = "24"};
+
+    inbyzupfSQLrec_IBOPM_nameLabel TextLabel{text = "Opmerking", layoutData = new GridLayoutData{row = 6, column = 1}};
+    inbyzupfSQLrec_IBOPM_area DojoTextArea{layoutData = new GridLayoutData{row = 6, column = 2},fontSize = "24"};
+    inbyzupfSQLrec_IBOPM_controller Controller{@MVC{model = inbyzupfSQLrec.IBOPM, view = inbyzupfSQLrec_IBOPM_area as
+                            Widget}, validStateSetter = handleValidStateChange_inbyzupfSQLrec};
+    inbyzupfSQLrec_IBOPM_formField FormField{controller = inbyzupfSQLrec_IBOPM_controller, nameLabel = inbyzupfSQLrec_IBOPM_nameLabel};
+
+    inbyzupfSQLrec_IBURAKK_nameLabel TextLabel{text = "IBURAKK", layoutData = new GridLayoutData{row = 7, column = 1}};
+    inbyzupfSQLrec_IBURAKK_field DojoTextField{layoutData = new GridLayoutData{row = 7, column = 2}};
+    inbyzupfSQLrec_IBURAKK_controller Controller{@MVC{model = inbyzupfSQLrec.IBURAKK, view = inbyzupfSQLrec_IBURAKK_field as
+                            Widget}, validStateSetter = handleValidStateChange_inbyzupfSQLrec};
+    inbyzupfSQLrec_IBURAKK_formField FormField{controller = inbyzupfSQLrec_IBURAKK_controller, nameLabel = inbyzupfSQLrec_IBURAKK_nameLabel};
+
+    inbyzupfSQLrec_form FormManager{entries =[
+
+                    // inbyzupfSQLrec_IBAANTAL_formField,
+                    
+                    inbyzupfSQLrec_IBOPM_formField,
+                    inbyzupfSQLrec_IBURAKK_formField]};
+    db2Service SQLservice{@DedicatedService};
+    medewerker int;
+    weeknummer int;
+    Volgnummer int;
+    fout string;
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, color = "#BABC1F", fontWeight = "bold"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, cellPadding = 4, rows = 1, columns = 5, children =[
+                    newButton, backButton, msgTextLabel, SaveButton, delButton
+            ]};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/terug.jpg' border=0  width=60 height=60  style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick,	width = "80",
+    	height = "70"};
+    SaveButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/upd.png' border=0 width=60 height=60   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= SaveButton_onClick,	width = "80",
+    	height = "70"};
+    weekMedewTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "TextLabel"};
+    newButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/add.png' border=0  width=60 height=60  style='cursor: hand;'  title='Toevoegen'>", onClick ::= newButton_onClick,	width = "80",
+    	height = "70"};
+    delButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/del.png' border=0  width=60 height=60   style='cursor: hand;'  title='Verwijderen'>", onClick ::= delButton_onClick,	width = "80",
+    	height = "70"};
+    searchinbyzupf searchInbyzupf;
+    detailWerkuren inbyzupfSQLrec;
+    inbyzupfRec inbyzupfRec;
+    testTextLabel TextLabel{layoutData = new GridLayoutData{row = 7, column = 1}, text = "TextLabel"};
+
+    function start()
+    //initRui();
+    end
+
+    function getData()
+        msgTextLabel.text = "";
+        inbyzupfSQLrec_ui.disabled = true;
+
+        case(inbyzupfSQLRec.IBDAG as string)
+            when("7")
+                inbyzupfSQLRec.IBDAG = "zo";
+            when("1")
+                inbyzupfSQLRec.IBDAG = "ma";
+            when("2")
+                inbyzupfSQLRec.IBDAG = "di";
+            when("3")
+                inbyzupfSQLRec.IBDAG = "wo";
+            when("4")
+                inbyzupfSQLRec.IBDAG = "do";
+            when("5")
+                inbyzupfSQLRec.IBDAG = "vr";
+            when("6")
+                inbyzupfSQLRec.IBDAG = "za";
+
+        end
+        call db2Service.getBijzUrenDetail(inbyzupfSQLRec)
+                returning to urenretrieved1;
+    end
+
+    function urenretrieved1(inbyzupfSQLRec inbyzupfSQLRec in, retResult string in)
+
+        msgTextLabel.text = retresult;
+        detailwerkuren = inbyzupfSQLRec;
+        inbyzupfSQLrec_form.publish();
+
+        if(inbyzupfSQLRec.IBURAKK == "J")
+            newButton.disabled = true;
+            SaveButton.disabled = true;
+            delButton.disabled = true;
+            newbutton.text = libraryVerloning.ADD_DIS_BUTTON;
+            savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+            delbutton.text = libraryVerloning.DEL_DIS_BUTTON;
+            inbyzupfSQLrec_IBMDWID_field.disabled = true;
+            inbyzupfSQLrec_IBCOCO_comboBox.disabled = true;
+            inbyzupfSQLrec_IBAANTAL_field.disabled = true;
+            inbyzupfSQLrec_IBDAG_comboBox.disabled = true;
+            inbyzupfSQLrec_IBOPM_area.disabled = true;
+
+        else
+            newButton.disabled = false;
+            SaveButton.disabled = false;
+            delButton.disabled = false;
+            newbutton.text = libraryVerloning.ADD_BUTTON;
+            savebutton.text = libraryVerloning.UPD_BUTTON;
+            delbutton.text = libraryVerloning.DEL_BUTTON;
+            inbyzupfSQLrec_IBMDWID_field.disabled = false;
+            inbyzupfSQLrec_IBCOCO_comboBox.disabled = false;
+            inbyzupfSQLrec_IBAANTAL_field.disabled = false;
+            inbyzupfSQLrec_IBDAG_comboBox.disabled = false;
+            inbyzupfSQLrec_IBOPM_area.disabled = false;
+        end
+        inbyzupfSQLrec_IBMDWID_field.selection = libraryVerloning.zoekPloegNaam(inbyzupfSQLRec.IBMDWID);
+        inbyzupfSQLrec_IBCOCO_comboBox.selection = libraryVerloning.zoekKompOmschr(inbyzupfSQLRec.IBCOCO);
+        inbyzupfSQLrec_IBAANTAL_field.text = ruiFunctions.numberReturnComma(inbyzupfSQLrec.IBAANTAL as string);
+        case(inbyzupfSQLRec.IBDAG)
+
+            when("zo")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 8; // "Zondag";
+            when("ma")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 2; //"Maandag";
+            when("di")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 3; //"Dinsdag";
+            when("wo")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 4; // "Woensdag";
+            when("do")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 5; // "Donderdag";
+            when("vr")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 6; // "Vrijdag";
+            when("za")
+                inbyzupfSQLrec_IBDAG_comboBox.selection = 7; //"Zaterdag";
+        
+        end
+
+        inbyzupfSQLrec_IBOPM_area.value = inbyzupfSQLrec.IBOPM;
+        inbyzupfSQLrec_IBWEEKNR_field.readOnly = true;
+    end
+
+    function inbyzupfSQLrec_form_Publish(event Event in)
+        inbyzupfSQLrec_form.publish();
+        inbyzupfSQLrec_form_Validate();
+    end
+
+    function inbyzupfSQLrec_form_Validate()
+        inbyzupfSQLrec_form.isValid();
+    end
+
+    function handleValidStateChange_inbyzupfSQLrec(view Widget in, valid boolean in)
+        for(n int from inbyzupfSQLrec_form.entries.getSize() to 1 decrement by 1)
+            entry FormField = inbyzupfSQLrec_form.entries[n];
+            if(entry.controller.view == view)
+                if(valid)
+                // TODO: handle valid value
+                else
+                    msg string? = entry.controller.getErrorMessage();
+                // TODO: handle invalid value
+                end
+            end
+        end
+    end
+
+    function inbyzupfSQLrec_IBMDWID_field_onChange(event Event in)
+
+    end
+
+    function urenMedewerker(urenArray inbyzupfSQLrec[] in, retResult string in)
+
+        urenPerMedewerker = urenarray as inbyzupfSQLrec[];
+
+        // inbyzupfSQLrec_IBMDWID_field.disabled = false;
+    end
+
+    function backButton_onClick(event Event in)
+        infobus.publish("WEEKSTAAT_MEDEW", "");
+    end
+
+    function newButton_onClick(event Event in)
+
+        addRecord();
+    end
+
+    function SaveButton_onClick(event Event in)
+    //        if(inbyzupfSQLrec_form.isValid())
+    //            inbyzupfSQLrec_form.commit();
+    
+        updRecord();
+        //        end
+        
+    end
+
+    function updRecord()
+        fout = checkForm("Upd");
+        if(fout == "")
+            inbyzupfSQLrec_ui.disabled = true;
+            SAVEButton.disabled = true;
+
+            savebutton.text = libraryVerloning.UPD_DIS_BUTTON;
+
+            msgTextLabel.text = "";
+            vulTabel();
+
+            call db2Service.updBijzUrendetail(inbyzupfSQLRec)
+                    returning to recordUpdated
+                    onException serviceLib.serviceExceptionHandler;
+        end
+    end
+
+    function recordUpdated(retResult string in)
+        msgTextLabel.text = retResult;
+        inbyzupfSQLrec_ui.disabled = false;
+        SAVEButton.disabled = false;
+
+        savebutton.text = libraryVerloning.UPD_BUTTON;
+
+    end
+
+    function addRecord()
+        fout = checkForm("Add");
+        if(fout == "")
+            inbyzupfSQLrec_ui.disabled = true;
+            newButton.disabled = true;
+            newbutton.text = libraryVerloning.ADD_DIS_BUTTON;
+
+            msgTextLabel.text = "";
+            vulTabel();
+
+            call db2Service.addBijzUrendetail(inbyzupfSQLrec)
+                    returning to recordAdded
+                    onException serviceLib.serviceExceptionHandler;
+        end
+    end
+
+    function recordAdded(retResult string in)
+        inbyzupfSQLrec_ui.disabled = false;
+        newButton.disabled = false;
+        newbutton.text = libraryVerloning.ADD_BUTTON;
+
+        msgTextLabel.text = retResult;
+    end
+
+    function delRecord()
+        inbyzupfRec.IBWEEKNR = detailWerkuren.IBWEEKNR;
+        inbyzupfRec.IBVOLGNR = detailWerkuren.IBVOLGNR;
+        inbyzupfRec.IBMDWID = detailWerkuren.IBMDWID;
+        call db2Service.delBijzUrendetail(inbyzupfRec)
+                returning to recorddeleted
+                onException serviceLib.serviceExceptionHandler;
+
+    end
+
+    function recorddeleted(retResult string in)
+        inbyzupfSQLrec_ui.disabled = false;
+
+        msgTextLabel.text = retResult;
+    end
+
+    function vultabel()
+        index int = inbyzupfSQLrec_IBMDWID_field.selection;
+        inbyzupfSQLrec.IBMDWID = libraryVerloning.EigenploegNummer[index];
+
+        inbyzupfSQLrec.IBCOCO = libraryVerloning.komponentCode[inbyzupfSQLrec_IBCOCO_comboBox.selection];
+
+        inbyzupfSQLrec.IBWeeknr = inbyzupfSQLrec_IBWEEKNR_field.text as int;
+        case(inbyzupfSQLrec_IBDAG_comboBox.selection)
+
+            when(8)
+                inbyzupfSQLrec.IBDAG="zo"; 
+            when(2)
+                 inbyzupfSQLrec.IBDAG="ma"; 
+            when(3)
+                 inbyzupfSQLrec.IBDAG="di"; 
+            when(4)
+                 inbyzupfSQLrec.IBDAG="wo"; 
+            when(5)
+                 inbyzupfSQLrec.IBDAG="do"; 
+            when(6)
+                 inbyzupfSQLrec.IBDAG="vr"; 
+            when(7)
+                 inbyzupfSQLrec.IBDAG="za"; 
+        
+        end
+        
+        inbyzupfSQLrec.IBOPM = inbyzupfSQLrec_IBOPM_area.value;
+        inbyzupfSQLrec.IBURAKK = "N";
+    end
+
+    function checkForm(soort string in) returns(string)
+        fout = "";
+        msgTextLabel.text = "";
+
+        decimalIndex int = strlib.indexOf(inbyzupfSQLrec_IBAANTAL_field.text,
+                        ",");
+
+        if(inbyzupfSQLrec_IBAANTAL_field.text == "")
+            msgTextLabel.text = "Geef uren op";
+
+        end
+        if(decimalindex == 0)
+            inbyzupfSQLrec_IBAANTAL_field.text = inbyzupfSQLrec_IBAANTAL_field.text +
+                    ",00";
+        else
+            checkFormat string = ruiFunctions.checkKwartier(inbyzupfSQLrec_IBAANTAL_field.text);
+            if(checkFormat == "Fout")
+                msgTextLabel.text = "Alleen kwartieren (00, 25, ,50 ,75) zijn toegestaan";
+            end
+        end
+
+        if(inbyzupfSQLrec_IBWEEKNR_field.text == "")
+            msgTextLabel.text = "Geef weeknummer op";
+        end
+
+        if(strlib.characterLen(inbyzupfSQLrec_IBWEEKNR_field.text) < 6)
+            msgTextLabel.text = "Geef geldig weeknummer op JJJJWW";
+        end
+        if(inbyzupfSQLrec_IBCOCO_comboBox.selection == 1 )
+            msgTextLabel.text = "Kies een soort";
+        end
+
+        if(inbyzupfSQLrec_IBDAG_comboBox.selection == 1)
+            msgTextLabel.text = "Kies een dag";
+        end
+        index int = inbyzupfSQLrec_IBMDWID_field.selection;
+
+        inbyzupfSQLrec.IBMDWID = libraryVerloning.MedewerkersNummer[index];
+
+        inbyzupfSQLrec.IBAANTAL = ruiFunctions.numberPoint(inbyzupfSQLrec_IBAANTAL_field.text);
+
+        fout = msgTextLabel.text;
+        return(fout);
+    end
+
+    private function delButton_onClick(e Event in)
+        delRecord();
+    end
+
+    function initRui()
+        ui.children =[inbyzupfSQLrec_ui, buttonGrid, msgTextLabel,
+                weekMedewTextLabel];
+        msgTextLabel.text = "";
+        inbyzupfSQLrec_IBMDWID_field.selection = libraryVerloning.zoekPloegNaam(medewerker);
+        inbyzupfSQLrec_IBWEEKNR_field.text = weeknummer as string;
+        inbyzupfSQLrec_IBDAG_comboBox.selection = 1;
+        inbyzupfSQLrec_IBAANTAL_field.text = "0";
+        inbyzupfSQLrec_IBCOCO_comboBox.selection =1;
+        inbyzupfSQLrec_IBOPM_area.value = "";
+    end
+
+end

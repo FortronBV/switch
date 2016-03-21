@@ -1,0 +1,235 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.Box;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import egl.io.sql.column;
+import dataVerloning.baehpSQLrec;
+import dataVerloning.inbasInfSQLrec;
+import dataVerloning.inbnmmpfSQLrec;
+import dataVerloning.inmmpfSQLrec;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+//
+//
+
+handler werkenMetMaterialenHandler type RUIhandler{initialUI =[werkenMetMaterialenBox
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "werkenMetArtikelenHandler"}
+    werkenMetMaterialenBox Box{layoutData = new GridLayoutData{row = 2, column = 1}};
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[]};
+    mat string[0];
+    matCode int[0];
+    //mmeenh string[0];
+    //mideenh string[0];
+    //mateenh string[0];
+    matgeg string;
+    matAlleen string[0];
+    midAlleen string[0];
+
+    //eenh string[0];
+    //eenhCode string[0];
+    //eenhgeg string; 
+    lengte int;
+    wrkMat werkenMetMaterialen;
+    detMat detailMaterialen;
+    db2Service SQLservice{@DedicatedService};
+    matArray inmmpfSQLrec[0];
+    //eenhArray baehpSQLrec[0];
+    bonnummer int;
+    inbnmmpfSQLrec inbnmmpfSQLrec;
+
+    function start()
+        
+        getMaterialen();
+        infobusName string= "WRK_MAT";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "ADD_MAT";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "DEL_MAT";
+        infobus.subscribe(infobusName, infobusEvents);
+        infobusName = "UPD_MAT";
+        infobus.subscribe(infobusName, infobusEvents);
+
+        getWrkMat();
+        //bonnummer= 502986; 
+        wrkMat.bonnummer = BONNUMMER;
+          
+        wrkMat.initRui();
+        wrkMat.getdata();
+        wrkMat.msgTextLabel.text = "";
+        werkenMetMaterialenBox.children =[wrkMat.ui];
+
+    end
+
+    function infobusEvents(eventName string in, dataObject any in)
+        case(eventName)
+            when("WRK_MAT")
+                getWrkMat();
+                // bonrecord inbasInfSQLrec = dataobject as inbasInfSQLrec;
+                wrkMat.bonnummer = BONNUMMER;
+                wrkMat.initRui();
+                wrkMat.getdata();
+                wrkMat.msgTextLabel.text = "";
+                werkenMetMaterialenBox.children =[wrkMat.ui];
+            when("ADD_MAT")
+                getdetMat();
+                detmat.initRui();
+                detmat.enableRui();
+				detMat.msgTextLabel.text = "";	
+                detmat.infoTextLabel.text = "Werken met materialen en middelen bij bon: " +
+                        bonnummer as string;
+                detmat.bonnummer = bonnummer;
+                detmat.materialenrec.IMBONNR = bonnummer;
+                detMat.materialenrec_IMOMSCHR_combo.values = libraryVerloning.Materialen;
+                //detMat.materialenrec_IMEENH_field.values = libraryVerloning.eenheden;
+                //detMat.materialenrec_IMEENH_field.value = "Maak een keuze";
+                detMat.materialenrec_IMOMSCHR_combo.selection = 1;
+                detmat.materialenrec_IMAANT_field.text="0";
+                detMat.materialenrec_IMOMSCHR_combo.width = lengte;
+                
+                detmat.updButton.disabled=true;
+                detmat.updButton.Text=libraryVerloning.UPD_DIS_BUTTON;
+                detmat.delButton.disabled=true;
+                detmat.delButton.Text=libraryVerloning.DEL_DIS_BUTTON;
+                detmat.newButton.disabled=false;
+                detmat.newButton.Text=libraryVerloning.ADD_BUTTON;
+                werkenMetMaterialenBox.children =[detMat.ui];
+            when("UPD_MAT")
+                getdetMat();
+                detmat.initRui();
+				detmat.enableRui();
+                inbnmmpfSQLrec inbnmmpfSQLrec = dataObject as inbnmmpfSQLrec;
+                detmat.infoTextLabel.text = "Werken met materialen en middelen bij bon: " +
+                        bonnummer as string;
+                detmat.bonnummer = bonnummer;
+                detmat.materialenrec.IMBONNR = bonnummer;
+                detmat.materialenrec.IMVOLGNR = inbnmmpfSQLrec.IMVOLGNR;
+                detmat.getData();
+                detMat.materialenrec_IMOMSCHR_combo.values = libraryVerloning.Materialen;
+                //detMat.materialenrec_IMEENH_field.values = libraryVerloning.eenheden;
+                //detMat.materialenrec_IMEENH_field.value = "Maak een keuze";
+                //detMat.materialenrec_IMOMSCHR_combo.value = "Geen materialen/middelen";
+                detMat.materialenrec_IMOMSCHR_combo.width = lengte;
+                detmat.updButton.disabled=false;
+                detmat.updButton.Text=libraryVerloning.UPD_BUTTON;
+                detmat.newButton.disabled=false;
+                detmat.newButton.Text=libraryVerloning.ADD_BUTTON;
+                detmat.delButton.disabled=true;
+                detmat.delButton.Text=libraryVerloning.DEL_DIS_BUTTON;
+                werkenMetMaterialenBox.children =[detMat.ui];
+  		when("DEL_MAT")
+                getdetMat();
+				detmat.initRui();
+                inbnmmpfSQLrec inbnmmpfSQLrec = dataObject as inbnmmpfSQLrec;
+                detmat.infoTextLabel.text = "Werken met materialen en middelen bij bon: " +
+                        bonnummer as string;
+                detmat.bonnummer = bonnummer;
+                detmat.materialenrec.IMBONNR = bonnummer;
+                detmat.materialenrec.IMVOLGNR = inbnmmpfSQLrec.IMVOLGNR;
+                detmat.getData();
+                detmat.updButton.disabled=true;
+                detmat.updButton.Text=libraryVerloning.UPD_DIS_BUTTON;
+                detmat.newButton.disabled=true;
+                detmat.newButton.Text=libraryVerloning.ADD_DIS_BUTTON;
+                detmat.delButton.disabled=false;
+                detmat.delButton.Text=libraryVerloning.DEL_BUTTON;
+                detmat.disableRui();	
+                werkenMetMaterialenBox.children =[detMat.ui];
+
+        end
+    end
+
+    function getMaterialen()
+    // vul uren listbox
+//        eenhCode.removeAll();
+//        eenh.removeAll();
+        mat.removeAll();
+        matcode.removeAll();
+        //mateenh.removeAll();
+        matAlleen.removeAll();
+        midAlleen.removeAll();
+
+        call db2Service.getMaterialen(matArray) returning to MatRetrieved
+                onException serviceLib.serviceExceptionHandler;
+
+//        call db2Service.getEenheden(eenhArray) returning to EenhRetrieved
+//                onException serviceLib.serviceExceptionHandler;
+
+    end
+
+//    function EenhRetrieved(eenhArray baehpSQLrec[] in, retResult string in)
+//        eenhGeg = "Maak een keuze";
+//        eenh.appendElement(eenhgeg);
+//        eenhCode.appendElement(0);
+//        for(i int from 1 to eenhArray.getSize())
+//
+//            eenhgeg = EENHArray[i].eHOMSCHR;
+//            eenh.appendElement(eenhgeg);
+//            eenhCode.appendElement(eenhArray[i].EHCODE);
+//
+//        end
+//        Libraryverloning.eenheden = eenh;
+//        Libraryverloning.eenhedenCode = eenhCode;
+//    end
+
+    function MatRetrieved(matArray inmmpfSQLrec[] in, retResult string in)
+        matGeg = "Geen materialen/middelen";
+
+        mat.appendElement(matgeg);
+        matAlleen.appendElement(matgeg);
+        midAlleen.appendElement(matgeg);
+        matCode.appendElement(0);
+        //mateenh.appendElement("");
+        matGeg = "Materiaal niet in lijst....";
+
+        mat.appendElement(matgeg);
+        matAlleen.appendElement(matgeg);
+        midAlleen.appendElement(matgeg);
+        matCode.appendElement(0);
+        //mateenh.appendElement("n.v.t.");
+        lengte = 0;
+        for(i int from 1 to matArray.getSize())
+            if(matArray[i].INCODE != 0)
+                matgeg = matArray[i].INOMSCHR;
+                mat.appendElement(matgeg);
+                matCode.appendElement(matArray[i].INCODE);
+                if(matArray[i].INSOORT == "M")
+                    matAlleen.appendElement(matgeg);
+                else
+                    midAlleen.appendElement(matgeg);
+                end
+                
+            end
+            if(StrLib.characterLen(matgeg) > lengte)
+                lengte = StrLib.characterLen(matgeg);
+            end
+        end
+        lengte = lengte * 7;
+        Libraryverloning.Materialen = mat;
+        Libraryverloning.MateriaalCode = matCode;
+        Libraryverloning.materiaalAlleen = matAlleen;
+        Libraryverloning.middelenAlleen = midAlleen;
+    end
+
+    private function getWrkMat() returns(werkenMetMaterialen)
+        if(this.wrkMat == null)
+            this.wrkMat = new werkenMetMaterialen{};
+
+        end
+
+        return(this.wrkMat);
+    end
+
+    private function getdetMat() returns(detailMaterialen)
+        if(this.detMat == null)
+            this.detMat = new detailMaterialen{};
+
+        end
+
+        return(this.detMat);
+    end
+end

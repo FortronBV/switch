@@ -1,0 +1,176 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.CheckBox;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.ui.rui.Event;
+import egl.ui.rui.Widget;
+import dataFortron.baPstStatusSQLrec;
+import dataFortron.inpostpfSQLrec;
+import dojo.widgets.DojoButton;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+
+
+//
+//
+
+handler werkenMetPosten type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "werkenMetPosten"}
+
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[topGrid,
+                    infoTextLabel, postenArray_ui, buttonGrid]};
+    //=============================================================================================================
+    //services
+    //=============================================================================================================
+    db2Service SQLservice{@DedicatedService};
+    postenArray baPstStatusSQLrec[0];
+    StatusArray inpostpfSQLrec[0];
+    StatusRec inpostpfSQLrec;
+    selectedRecord baPstStatusSQLrec;
+    postenArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 2}, columns =[
+                    new DataGridColumn{name = "PSPOSTSTS", displayName = "Actief", width = 70},
+                    new DataGridColumn{name = "PMPST", displayName = "Post", width = 60},
+                    new DataGridColumn{name = "PSVKM", displayName = "M2", width = 60},
+                    new DataGridColumn{name = "PSBPJ", displayName = "Freq.", width = 60},
+                    new DataGridColumn{name = "BTBNR", displayName = "Beurt", width = 65},
+                    new DataGridColumn{name = "PSUPB", displayName = "Uren", width = 70},
+                    new DataGridColumn{name = "PMOMS", displayName = "Omschrijving", width = 450},
+                    new DataGridColumn{name = "DUMMY", displayName = "", width = 1}
+
+            ], data = postenArray as any[], showScrollbar = false, showButtonBar = true, editorBehaviors =[getAkkoordPost
+            ], selectionListeners =[cellClicked] };
+    bonnummer int;
+    bonnumerTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Bonnummer", fontWeight = "bold", color = "DarkSlateBlue"};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 2}, cellPadding = 4, rows = 1, columns = 3, children =[
+                    msgTextLabel, backButton, saveButton]};
+    saveButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/save.png' border=0  width=47 height=47   style='cursor: hand;'  title='Opslaan'> ", onClick ::= saveButton_onClick};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, fontWeight = "bold"};
+    infoTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 2}, text = "Verwijder het vinkje bij niet uitgevoerde posten.", fontWeight = "bolder"};
+    topGrid GridLayout{layoutData = new GridLayoutData{row = 1, column = 2}, cellPadding = 4, rows = 1, columns = 3, children =[
+                    TotaalurenText, totaalurenTextLabel, bonnumerTextLabel]};
+    totaalurenTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Totaal aantal uren:", fontWeight = "bold"};
+    TotaalurenText TextLabel{layoutData = new GridLayoutData{row = 1, column = 3}, fontWeight = "bold"};
+    gewijzigd boolean;
+	 totaalUren decimal(9, 2);
+    function start()
+//     bonnummer = 509915;
+//    getdata();
+    end
+
+    function getdata()
+
+        postenArray_ui.disabled = true;
+
+        call db2Service.getPostenStatus(bonnummer, postenArray)
+                returning to postenRetrieved;
+    end
+
+    function postenRetrieved(postenArray bapstStatusSQLrec[] in, retResult string in)
+        totaalUren = 0;
+        totaalurenText.text = "";
+        postenArray_ui.data = postenArray as any[];
+        myAny any[0];
+        checkedRec any;
+        for(i int from 1 to postenArray.getsize())
+			
+            if(postenArray[i].PSPOSTSTS == 1)
+                totaalUren = totaalUren + postenArray[i].psupb;
+                checkedRec = postenArray_ui.data[i];
+                myAny.appendElement(checkedRec);
+            end
+        end
+        postenArray_ui.setChecked(myAny);
+        postenArray_ui.gotoPage(1);
+        if (libraryVerloning.onderaannemer!="J" )
+        	totaalurenText.text = ruiFunctions.numberReturnComma(totaalUren) as string;
+        else
+        	totaalurenText.text="";
+        end
+          postenArray_ui.disabled = false;		
+    end
+
+    private function checkboxListener(grid DataGrid in)
+
+    end
+
+    private function getAkkoordPost(grid DataGrid in, cell Widget in, rowData any in, dataIndex int in, column DataGridColumn in, value any in) returns(Widget)
+        case(column.name)
+            when("PSPOSTSTS")
+
+                if(rowData.PSPOSTSTS as int == 1)
+                    return(new checkBox{selected = true, onChange ::= wijzigActief, id = dataIndex as string});
+                else
+                    return(new checkBox{selected = false, onChange ::= wijzigActief, id = dataIndex as string});
+                end
+            when("PSUPB")
+            	if (libraryVerloning.onderaannemer!="J")
+                	return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.PSUPB as string) as string});
+                else
+                	return(new textlabel{text = "0,00"});
+               end 		
+            when("PSVKM")
+                return(new textlabel{text = ruiFunctions.numberReturnComma(rowData.PSVKM as string) as string});
+        end
+    end
+
+    function initRui()
+        bonnumerTextLabel.text = "Bonnummer: " + bonnummer as string;
+        StatusArray.removeAll();
+    end
+
+    function saveButton_onClick(event Event in)
+        msgTextLabel.text = "";
+
+        call db2Service.savePostenStatus(StatusArray) returning to postenSaved;
+    end
+
+    function postenSaved(postenArray inpostpfSQLrec[] in, retResult string in)
+        msgTextLabel.text = retresult;
+        gewijzigd = true;
+    end
+
+    function backButton_onClick(event Event in)
+        if(gewijzigd)
+        	infobus.publish("SEL_BONNEN_REF", "");
+        else
+            infobus.publish("SEL_BONNEN", "");
+        end
+    end
+
+    private function wijzigActief(e Event in)
+    	 
+        checkboks CheckBox = e.widget as Checkbox;
+        StatusREc.PSPOSTNR=postenArray_ui.data[e.widget.id as int].PMPST as int;
+        StatusREc.PSBONNR = bonnummer;
+        
+        	
+        uren decimal(9, 2) = postenArray_ui.data[e.widget.id as int].PSUPB as decimal(9,2); 
+        
+        if(checkboks.selected == true)
+            StatusREc.PSPOSTSTS = 1;
+            totaaluren=totaaluren+uren;
+        else
+            StatusREc.PSPOSTSTS = 0;
+            totaaluren=totaaluren-uren;
+        end
+        totaalurenText.text=ruiFunctions.numberReturnComma(totaaluren) as string;
+        StatusArray.appendElement(StatusREc);
+
+    end
+
+	
+
+	private function cellClicked (grid DataGrid in)
+		selectedrecord = postenArray_ui.getSelection()[1] as baPstStatusSQLrec;
+	end
+end

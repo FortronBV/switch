@@ -1,0 +1,358 @@
+package weekstaatHandlers;
+
+// RUI Handler
+
+import com.ibm.egl.rui.infobus.InfoBus;
+import com.ibm.egl.rui.widgets.Combo;
+import com.ibm.egl.rui.widgets.DataGrid;
+import com.ibm.egl.rui.widgets.DataGridColumn;
+import com.ibm.egl.rui.widgets.DataGridLib;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.HyperLink;
+import com.ibm.egl.rui.widgets.TextField;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.io.sql.column;
+import egl.ui.rui.Event;
+import dataVerloning.inbnmmpfSQLrec;
+import dataVerloning.inmmpfSQLrec;
+import dojo.widgets.DojoButton;
+import dojo.widgets.DojoCheckBox;
+import dojo.widgets.DojoTextField;
+import fortronRuiFunctions.ruiFunctions;
+import libraries.libraryVerloning;
+import services.SQLservice;
+
+
+
+
+//
+//
+
+handler detailMaterialen type RUIhandler{initialUI =[ui
+            ], onConstructionFunction = start, cssFile = "css/fortron.verloning.website2.rui.css", title = "detailMaterialen"}
+
+    ui GridLayout{columns = 3, rows = 4, cellPadding = 4, children =[
+                    HelpLink, infoTextLabel, kiesGrid, materialenrec_ui, buttonGrid]};
+    db2Service SQLservice{@DedicatedService};
+    buttonGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 2}, cellPadding = 4, rows = 1, columns = 6, children =[
+                    newButton, msgTextLabel, updButton, delButton, backButton
+            ]};
+    backButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 4}, text = "<img src='images/terug.jpg' border=0  width=47 height=47   style='cursor: hand;'  title='Terug'> ", onClick ::= backButton_onClick};
+    newButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 1}, text = "<img src='images/add.png' border=0  width=47 height=47   style='cursor: hand;'  title='Toevoegen'> ", onClick ::= newButton_onClick};
+    delButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img src='images/del.png' border=0  width=47 height=47   style='cursor: hand;'  title='Verwijderen'> ", onClick ::= delButton_onClick};
+    updButton DojoButton{layoutData = new GridLayoutData{row = 1, column = 2}, text = "<img src='images/upd.png' border=0  width=47 height=47   style='cursor: hand;'  title='Wijzigen'> ", onClick ::= updButton_onClick};
+    msgTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 5}, color = "#BABC1F", fontWeight = "bold"};
+    materialenrec inbnmmpfSQLrec;
+	matArray inmmpfSQLrec[0];
+	selectedRecord inmmpfSQLrec;
+	
+	 materialenArray_ui DataGrid{layoutData = new GridLayoutData{row = 3, column = 3}, columns =[
+                    new DataGridColumn{name = "INOMSCHR", displayName = "Omschrijving", width = 300},
+					new DataGridColumn{name = "INEENH", displayName = "Eenheid", width = 100}
+                    
+            ], data = matArray as any[], selectionMode = DataGridLib.SINGLE_SELECTION, selectionListeners =[cellClicked
+            ]};
+	
+    materialenrec_ui GridLayout{layoutData = new GridLayoutData{row = 3, column = 2}, rows = 4, columns = 2, cellPadding = 4, children =[
+                    zelfMatGrid, materialenrec_IMOMSCHR_nameLabel,
+                    materialenrec_IMOMSCHR_combo,
+                    materialenrec_IMAANT_nameLabel, materialenrec_IMAANT_field
+
+            ]};
+
+    materialenrec_IMOMSCHR_nameLabel TextLabel{text = "Omschrijving", layoutData = new GridLayoutData{row = 1, column = 1}, fontWeight = "bold"};
+    materialenrec_IMOMSCHR_combo Combo{layoutData = new GridLayoutData{row = 1, column = 2}, values =[], width = "350", onChange ::= materialenrec_IMOMSCHR_combo_onChange};
+
+    materialenrec_IMAANT_nameLabel TextLabel{text = "Aantal", layoutData = new GridLayoutData{row = 2, column = 1}, fontWeight = "bold"};
+    materialenrec_IMAANT_field DojoTextField{layoutData = new GridLayoutData{row = 2, column = 2}, width = "100"};
+
+    materialenrec_IMEENH_nameLabel TextLabel{text = "Eenheid", layoutData = new GridLayoutData{row = 3, column = 1}, fontWeight = "bold"};
+    materialenrec_IMEENH_field DojoTextField{layoutData = new GridLayoutData{row = 3, column = 2}, width = "120", readOnly = true};
+
+    kiesGrid GridLayout{layoutData = new GridLayoutData{row = 2, column = 2}, cellPadding = 4, rows = 1, columns = 4, children =[
+                    zoekButton, zoekTextField, MatCheckBox, MachinesCheckBox]};
+    MachinesCheckBox DojoCheckBox{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Machines", selected = true, onChange ::= MachinesCheckBox_onChange};
+    MatCheckBox DojoCheckBox{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Materialen/Middelen", selected = true, onChange ::= MachinesCheckBox_onChange};
+    infoTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 2}, text = "Werken met materialen en middelen bij bon: ", fontWeight = "bold", fontSize = "14"};
+    bonnummer int;
+    zelfMatGrid GridLayout{layoutData = new GridLayoutData{row = 4, column = 1, horizontalSpan = 2}, cellPadding = 4, rows = 2, columns = 2, children =[
+                    eenhTextField, matTextField, eenhTextLabel, MatTextLabel]};
+    MatTextLabel TextLabel{layoutData = new GridLayoutData{row = 1, column = 1}, text = "Omschrijving", fontWeight = "bold"};
+    eenhTextLabel TextLabel{layoutData = new GridLayoutData{row = 2, column = 1}, text = "Eenheid", fontWeight = "bold"};
+    matTextField TextField{layoutData = new GridLayoutData{row = 1, column = 2}, width = "300"};
+    eenhTextField TextField{layoutData = new GridLayoutData{row = 2, column = 2}};
+    zoekTextField TextField{ layoutData = new GridLayoutData{ row = 1, column = 3 }};
+    zoekButton DojoButton{ layoutData = new GridLayoutData{ row = 1, column = 4 }, text = "Zoek", onClick ::= zoekButton_onClick };
+    selectButton DojoButton{ layoutData = new GridLayoutData{ row = 1, column = 1 }, text = "Selecteer" , onClick ::= selecteerButton_onClick };
+    sluitButton DojoButton{ layoutData = new GridLayoutData{ row = 1, column = 2 }, text = "Sluiten" , onClick ::= sluitButton_onClick };
+    buttonGrid2 GridLayout{ layoutData = new GridLayoutData{ row = 4, column = 3 }, cellPadding = 4, rows = 1, columns = 2 ,children = [selectButton,sluitButton]};
+    
+	 HelpLink HyperLink{layoutData = new GridLayoutData{row = 1, column = 3}, text = "<img title='Help'  style='cursor: hand;' src='images/help.png' width=55, height=55>", href = "documenten/MatHelp.pdf", target = "_blank"};
+    function start()
+			
+    end
+
+    function getData()
+        materialenrec_ui.disabled = true;
+        disableRui();
+        msgTextLabel.text = "";
+
+        call db2Service.getMateriaalrecord(materialenrec)
+                returning to recordFound
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+    function recordFound(matRecord inbnmmpfSQLrec in, retResult string in)
+        msgTextLabel.text = retresult;
+        materialenrec_ui.disabled = false;
+        materialenrec = matrecord;
+        if(delButton.disabled)
+            enableRui();
+        end
+
+        materialenrec_IMAANT_field.text = ruiFunctions.numberReturnComma(matRecord.IMAANT);
+        // niet uit lijst 
+        if(matrecord.IMCODE == 99999)
+            materialenrec_IMOMSCHR_combo.selection = 2;
+            matTextField.text = matrecord.IMOMSCHR;
+            eenhTextField.text = matRecord.IMEENH;
+            zelfMatGrid.visible = true;
+            materialenrec_IMEENH_field.visible = false;
+            materialenrec_IMEENH_namelabel.visible = false;
+        else
+            zelfMatGrid.visible = false;
+            materialenrec_IMOMSCHR_combo.selection = libraryVerloning.zoekMatOmschrIndex(matrecord.IMOMSCHR);
+            materialenrec_IMEENH_field.text = matRecord.IMEENH;
+            materialenrec_IMEENH_field.disabled = false;
+            materialenrec_IMEENH_field.visible = true;
+
+            materialenrec_IMEENH_namelabel.visible = true;
+        end
+    end
+
+    private function backButton_onClick(e Event in)
+    	ui.removeChild(materialenArray_ui);
+		ui.removeChild(ButtonGrid2);
+		zoekTextField.text="";
+        infobus.publish("WRK_MAT", "");
+    end
+
+    private function updButton_onClick(e Event in)
+        error string = checkform();
+
+        if(error == "")
+
+            materialenrec_ui.disabled = true;
+            disableRui();
+            msgTextLabel.text = "";
+
+            vultabel();
+
+            call db2Service.updMateriaalrecord(materialenrec)
+                    returning to recordAdded
+                    onException serviceLib.serviceExceptionHandler;
+        else
+            msgTextLabel.text = error;
+        end
+
+    end
+
+    private function newButton_onClick(e Event in)
+        error string = checkform();
+        if(error == "")
+            materialenrec_ui.disabled = true;
+            disableRui();
+            msgTextLabel.text = "";
+            vultabel();
+
+            call db2Service.addMaterialen(materialenrec)
+                    returning to recordadded
+                    onException serviceLib.serviceExceptionHandler;
+        else
+            msgTextLabel.text = error;
+        end
+
+    end
+
+    function recordadded(retResult string in)
+        msgTextLabel.text = retresult;
+        materialenrec_ui.disabled = false;
+
+		materialenrec_IMEENH_field.disabled = false;
+        materialenrec_IMOMSCHR_combo.disabled = false;
+        materialenrec_IMAANT_field.disabled = false;
+        MachinesCheckBox.disabled = false;
+        MatCheckBox.disabled = false;
+    end
+
+    private function delButton_onClick(e Event in)
+        call db2Service.delMateriaalrecord(materialenrec)
+                returning to recorddeleted
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+    function recorddeleted(retResult string in)
+        msgTextLabel.text = retresult;
+
+        if(retresult == "Gegevens zijn verwijderd")
+            delButton.disabled = true;
+        end
+
+    end
+
+    function checkForm() returns(string)
+        fout string = "";
+
+        if(materialenrec_IMAANT_field.text == "")
+
+            materialenrec_IMAANT_field.text = "0";
+
+        end
+        //if(materialenrec_IMOMSCHR_combo.value == "Geen materialen/middelen")
+        if(materialenrec_IMOMSCHR_combo.selection == 1)
+
+            ;
+            materialenrec_IMEENH_field.disabled = true;
+            materialenrec_IMEENH_field.text = "n.v.t";
+
+        else
+            materialenrec_IMEENH_field.disabled = false;
+            if(materialenrec_IMAANT_field.text == "0")
+                fout = "Geef aantal op";
+            end
+        end
+        // zekf materiaal opegev
+        if(materialenrec_IMOMSCHR_combo.selection == 2)
+            if(eenhTextField.text == "")
+                fout = "Geef eenheid op";
+            end
+            if(matTextField.text == "")
+                fout = "Geef omschrijving op";
+            end
+        else
+
+        end
+        return(fout);
+    end
+
+    function vultabel()
+        materialenrec.IMBONNR = bonnummer;
+
+        materialenrec.IMAANT = ruiFunctions.numberPoint(materialenrec_IMAANT_field.text) as decimal(9, 2);
+        if(materialenrec_IMOMSCHR_combo.selection == 2)
+        	 materialenrec.IMEENH = eenhTextField.text;
+            materialenrec.IMOMSCHR = matTextField.text;
+            materialenrec.IMCODE = 99999;
+        else
+
+            materialenrec.IMEENH = materialenrec_IMEENH_field.text;
+            case
+                when(MachinesCheckBox.selected and MatCheckBox.selected)
+                    materialenrec.IMOMSCHR = libraryVerloning.Materialen[materialenrec_IMOMSCHR_combo.selection];
+                when(MachinesCheckBox.selected)
+                    materialenrec.IMOMSCHR = libraryVerloning.materiaalAlleen[materialenrec_IMOMSCHR_combo.selection];
+                when(MatCheckBox.selected)
+                    materialenrec.IMOMSCHR = libraryVerloning.middelenAlleen[materialenrec_IMOMSCHR_combo.selection];
+
+            end
+            materialenrec.IMCODE = libraryVerloning.MateriaalCode[libraryVerloning.zoekMatOmschrIndex(materialenrec.IMOMSCHR)];
+        end
+    end
+
+    function materialenrec_IMOMSCHR_combo_onChange(event Event in)
+
+    // zelf materiaal opgeven    
+        if(materialenrec_IMOMSCHR_combo.selection == 2)
+
+            zelfMatGrid.visible = true;
+            materialenrec_IMEENH_field.visible = false;
+            materialenrec_IMEENH_namelabel.visible = false;
+        else
+            zelfMatGrid.visible = false;
+            materialenrec_IMEENH_field.visible = true;
+            materialenrec_IMEENH_namelabel.visible = true;
+            materialenrec_IMEENH_field.disabled = true;
+        end
+    end
+
+    function MachinesCheckBox_onChange(event Event in)
+
+        bepaalCheckBox();
+    end
+
+    function bepaalCheckBox()
+        case
+            when(MachinesCheckBox.selected and MatCheckBox.selected)
+                materialenrec_IMOMSCHR_combo.values = libraryVerloning.Materialen;
+            when(MachinesCheckBox.selected)
+                materialenrec_IMOMSCHR_combo.values = libraryVerloning.materiaalAlleen;
+            when(MatCheckBox.selected)
+                materialenrec_IMOMSCHR_combo.values = libraryVerloning.middelenAlleen;
+        end
+    end
+
+    function enableRui()
+        materialenrec_IMEENH_field.disabled = false;
+        materialenrec_IMOMSCHR_combo.disabled = false;
+        materialenrec_IMAANT_field.disabled = false;
+        MachinesCheckBox.disabled = false;
+        MatCheckBox.disabled = false;
+        MachinesCheckBox.selected=true;
+        MatCheckBox.selected=true;
+       
+    end
+
+    function disableRui()
+        materialenrec_IMEENH_field.disabled = true;
+        materialenrec_IMOMSCHR_combo.disabled = true;
+        materialenrec_IMAANT_field.disabled = true;
+        MachinesCheckBox.disabled = true;
+        MatCheckBox.disabled = true;
+    end
+
+    function initRui()
+        zelfMatGrid.visible = false;
+        materialenrec_IMEENH_field.visible = true;
+        materialenrec_IMEENH_namelabel.visible = true;
+        eenhTextField.text= "";
+        matTextField.text="";
+        
+        
+    end
+    
+    function zoekButton_onClick(event Event in)
+     
+        msgTextLabel.text = "";
+		
+        call db2Service.zoekMateriaal(zoekTextField.text, matArray)
+                returning to materiaalFound
+                onException serviceLib.serviceExceptionHandler;
+    end
+
+	function materiaalFound(matArray inmmpfSQLrec[] in, retResult string in)
+		materialenArray_ui.data =matArray as any[];
+		ui.appendChild(materialenArray_ui);
+		ui.appendChild(ButtonGrid2);
+		
+		msgTextLabel.text=retresult;
+		
+	end
+
+
+	private function cellClicked (grid DataGrid in)
+		selectedRecord = materialenArray_ui.getSelection()[1] as
+                inmmpfSQLrec;
+	end
+
+	private function selecteerButton_onClick (e Event in)
+		materialenrec_IMOMSCHR_combo.selection = libraryVerloning.zoekMatOmschrIndex(selectedRecord.INOMSCHR);
+		
+	end
+
+	private function sluitButton_onClick (e Event in)
+		ui.removeChild(materialenArray_ui);
+		ui.removeChild(ButtonGrid2);
+		zoekTextField.text="";
+	end
+end
