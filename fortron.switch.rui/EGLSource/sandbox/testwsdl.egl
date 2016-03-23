@@ -1,0 +1,25 @@
+package sandbox;
+
+// RUI Handler
+
+import com.ibm.egl.rui.widgets.GridLayout;
+import NET.webserviceX.www.GlobalWeatherSoap;
+
+//
+//
+handler testwsdl type RUIhandler {initialUI = [ ui ],onConstructionFunction = start, cssFile="css/fortron.switch.rui.css", title="testwsdl"}
+	testWeb GlobalWeatherSoap {@BindService{}};
+	ui GridLayout{ columns = 3, rows = 4, cellPadding = 4, children = [] };
+	land string="Netherlands";
+	stad string= "Maastricht";
+	function start()
+		SysLib.writeStdout("start");
+		call testWeb.GetWeather(stad, land) returning to toon;  
+		
+	end
+
+	function toon(retResult string? in)
+		SysLib.writeStdout(retresult);
+		SysLib.writeStdout("toon");
+	end	
+end

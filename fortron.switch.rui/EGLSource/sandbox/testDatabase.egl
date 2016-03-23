@@ -1,0 +1,83 @@
+package sandbox;
+
+// RUI Handler
+
+import com.ibm.egl.rui.mvc.Controller;
+import com.ibm.egl.rui.mvc.MVC;
+import com.ibm.egl.rui.widgets.GridLayout;
+import com.ibm.egl.rui.widgets.GridLayoutData;
+import com.ibm.egl.rui.widgets.TextLabel;
+import egl.ui.rui.Widget;
+import dojo.widgets.DojoLib;
+import dojo.widgets.DojoTextField;
+import dojo.widgets.DojoTimeTextBox;
+import switch.data.inbaspfSQLrec;
+import switch.services.sapServices;
+
+//
+//
+handler testDatabase type RUIhandler {initialUI = [ ui ],onConstructionFunction = start, cssFile="css/fortron.switch.rui.css", title="testDatabase"}
+	
+	ui GridLayout{ columns = 3, rows = 4, cellPadding = 4, children = [ TextLabel, bonnenRec_ui ] };
+	bonnenRec inbaspfSQLrec;
+	dbservice sapServices{@DedicatedService};
+	bonnenRec_ui GridLayout { layoutData = new GridLayoutData{ row = 2, column = 2 }, rows = 11, columns = 2, cellPadding = 4, children = [ bonnenRec_BABONNR_nameLabel,bonnenRec_BABONNR_field,bonnenRec_BAUSERID_nameLabel,bonnenRec_BAUSERID_field,bonnenRec_BAVOLGNR_nameLabel,bonnenRec_BAVOLGNR_field,bonnenRec_BATSTAMP_nameLabel,bonnenRec_BATSTAMP_textBox,bonnenRec_BANAAM_nameLabel,bonnenRec_BANAAM_field,bonnenRec_BASTATUS_nameLabel,bonnenRec_BASTATUS_field,bonnenRec_BAORKLT_nameLabel,bonnenRec_BAORKLT_field,bonnenRec_BADTAKK_nameLabel,bonnenRec_BADTAKK_textBox,bonnenRec_BADTDMAK_nameLabel,bonnenRec_BADTDMAK_textBox,bonnenRec_BATONEN_nameLabel,bonnenRec_BATONEN_field,bonnenRec_BAOPMERK_nameLabel,bonnenRec_BAOPMERK_field ] };
+
+	bonnenRec_BABONNR_nameLabel TextLabel { text="BABONNR" , layoutData = new GridLayoutData { row = 1, column = 1} };
+	bonnenRec_BABONNR_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 1, column = 2} };
+	bonnenRec_BABONNR_controller Controller { @MVC {model = bonnenRec.BABONNR, view = bonnenRec_BABONNR_field as Widget} };
+
+	bonnenRec_BAUSERID_nameLabel TextLabel { text="BAUSERID" , layoutData = new GridLayoutData { row = 2, column = 1} };
+	bonnenRec_BAUSERID_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 2, column = 2} };
+	bonnenRec_BAUSERID_controller Controller { @MVC {model = bonnenRec.BAUSERID, view = bonnenRec_BAUSERID_field as Widget} };
+
+	bonnenRec_BAVOLGNR_nameLabel TextLabel { text="BAVOLGNR" , layoutData = new GridLayoutData { row = 3, column = 1} };
+	bonnenRec_BAVOLGNR_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 3, column = 2} };
+	bonnenRec_BAVOLGNR_controller Controller { @MVC {model = bonnenRec.BAVOLGNR, view = bonnenRec_BAVOLGNR_field as Widget} };
+
+	bonnenRec_BATSTAMP_nameLabel TextLabel { text="BATSTAMP" , layoutData = new GridLayoutData { row = 4, column = 1} };
+	bonnenRec_BATSTAMP_textBox DojoTimeTextBox { readonly = true, value = bonnenRec.BATSTAMP, timePattern = DojoLib.TIMEBOX_FORMAT_12HR, visibleIncrement = DojoLib.TIMEBOX_ONE_HOUR, visibleRange = DojoLib.TIMEBOX_THREE_HOURS , layoutData = new GridLayoutData { row = 4, column = 2} };
+	bonnenRec_BATSTAMP_controller Controller { @MVC {model = bonnenRec.BATSTAMP, view = bonnenRec_BATSTAMP_textBox as Widget} };
+
+	bonnenRec_BANAAM_nameLabel TextLabel { text="BANAAM" , layoutData = new GridLayoutData { row = 5, column = 1} };
+	bonnenRec_BANAAM_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 5, column = 2} };
+	bonnenRec_BANAAM_controller Controller { @MVC {model = bonnenRec.BANAAM, view = bonnenRec_BANAAM_field as Widget} };
+
+	bonnenRec_BASTATUS_nameLabel TextLabel { text="BASTATUS" , layoutData = new GridLayoutData { row = 6, column = 1} };
+	bonnenRec_BASTATUS_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 6, column = 2} };
+	bonnenRec_BASTATUS_controller Controller { @MVC {model = bonnenRec.BASTATUS, view = bonnenRec_BASTATUS_field as Widget} };
+
+	bonnenRec_BAORKLT_nameLabel TextLabel { text="BAORKLT" , layoutData = new GridLayoutData { row = 7, column = 1} };
+	bonnenRec_BAORKLT_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 7, column = 2} };
+	bonnenRec_BAORKLT_controller Controller { @MVC {model = bonnenRec.BAORKLT, view = bonnenRec_BAORKLT_field as Widget} };
+
+	bonnenRec_BADTAKK_nameLabel TextLabel { text="BADTAKK" , layoutData = new GridLayoutData { row = 8, column = 1} };
+	bonnenRec_BADTAKK_textBox DojoTimeTextBox { readonly = true, value = bonnenRec.BADTAKK, timePattern = DojoLib.TIMEBOX_FORMAT_12HR, visibleIncrement = DojoLib.TIMEBOX_ONE_HOUR, visibleRange = DojoLib.TIMEBOX_THREE_HOURS , layoutData = new GridLayoutData { row = 8, column = 2} };
+	bonnenRec_BADTAKK_controller Controller { @MVC {model = bonnenRec.BADTAKK, view = bonnenRec_BADTAKK_textBox as Widget} };
+
+	bonnenRec_BADTDMAK_nameLabel TextLabel { text="BADTDMAK" , layoutData = new GridLayoutData { row = 9, column = 1} };
+	bonnenRec_BADTDMAK_textBox DojoTimeTextBox { readonly = true, value = bonnenRec.BADTDMAK, timePattern = DojoLib.TIMEBOX_FORMAT_12HR, visibleIncrement = DojoLib.TIMEBOX_ONE_HOUR, visibleRange = DojoLib.TIMEBOX_THREE_HOURS , layoutData = new GridLayoutData { row = 9, column = 2} };
+	bonnenRec_BADTDMAK_controller Controller { @MVC {model = bonnenRec.BADTDMAK, view = bonnenRec_BADTDMAK_textBox as Widget} };
+
+	bonnenRec_BATONEN_nameLabel TextLabel { text="BATONEN" , layoutData = new GridLayoutData { row = 10, column = 1} };
+	bonnenRec_BATONEN_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 10, column = 2} };
+	bonnenRec_BATONEN_controller Controller { @MVC {model = bonnenRec.BATONEN, view = bonnenRec_BATONEN_field as Widget} };
+
+	bonnenRec_BAOPMERK_nameLabel TextLabel { text="BAOPMERK" , layoutData = new GridLayoutData { row = 11, column = 1} };
+	bonnenRec_BAOPMERK_field DojoTextField { readOnly = true , layoutData = new GridLayoutData { row = 11, column = 2} };
+	bonnenRec_BAOPMERK_controller Controller { @MVC {model = bonnenRec.BAOPMERK, view = bonnenRec_BAOPMERK_field as Widget} };
+	TextLabel TextLabel{ layoutData = new GridLayoutData{ row = 4, column = 2 }, text="TextLabel" };
+	
+	function start()
+		bonnenrec.babonnr=516464;
+		call dbService.getBonnen(bonnenRec)
+                returning to recordRetrieved
+                onException serviceLib.serviceExceptionHandler;
+		
+	end
+
+	function recordRetrieved(inbaspfSQLrec inbaspfSQLrec in, retResult string in)
+		bonnenRec_BAUSERID_field.text=inbaspfSQLrec.BAUSERID;
+		TextLabel.text=retresult;
+	end	
+end
