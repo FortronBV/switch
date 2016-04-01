@@ -1,0 +1,18 @@
+package switch.data;
+
+record inbaspfSQLrec type sqlRecord{tablenames =[["FNPADMFLE.DBO.INBASPF"]
+            ], fieldsMatchColumns = yes, keyItems =[BABONNR]}
+
+    BABONNR int{column = "BABONNR"};
+    BAUSERID String {column = "BAUSERID"};
+    BAVOLGNR int{column = "BAVOLGNR", isSqlNullable = yes};
+    BATSTAMP timeStamp("yyyyMMddHHmmssffffff"){column = "BATSTAMP", isSqlNullable = yes};
+    BANAAM String{column = "BANAAM", isSqlNullable = yes};
+    BASTATUS int{column = "BASTATUS", isSqlNullable = yes};
+    BAORKLT String{column = "BAORKLT", isSqlNullable = yes};
+    BADTAKK timeStamp("yyyyMMddHHmmssffffff"){column = "BADTAKK", isSqlNullable = yes};
+    BADTDMAK timeStamp("yyyyMMddHHmmssffffff"){column = "BADTDMAK", isSqlNullable = yes};
+    BATONEN string{column = "BATONEN", isSqlNullable = yes, maxLen = 1};
+    BAOPMERK string{column = "BAOPMERK", isSqlNullable = yes, sqlVariableLen = yes};
+
+end

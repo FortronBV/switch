@@ -1,0 +1,30 @@
+package switch.access;
+
+import switch.data.serviceOrdersSQLrec;
+
+// basic library
+
+library serviceOrdersLib type BasicLibrary{}
+    melding string;
+
+    function getServiceOrders(zoekServiceOrders serviceOrdersSQLrec in, serviceOrdersArray serviceOrdersSQLrec[] out) returns(string)
+		melding="";
+        try
+        	get serviceOrdersArray with
+        		#sql{
+        			select
+        				SO_Nummer, SO_Omschrijving, SO_SoortWerk, FP_Code, 
+        				FP_Omschrijving, FP_Straat, FP_Huisnummer, 
+        				FP_HuisnummerToev, FP_PostcodeAlf, FP_PostcodeNum, 
+        				FP_Plaats, FP_Land
+        			from dbo.ServiceOrders
+        			where FP_Plaats='Amsterdam';
+        		};
+        	
+        onException(exception SQLException)
+            melding = exception.message;
+        end
+        return(melding);
+    end
+
+end

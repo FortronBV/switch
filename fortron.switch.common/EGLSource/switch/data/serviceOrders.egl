@@ -1,0 +1,19 @@
+package switch.data;
+
+record serviceOrdersSQLrec type sqlRecord{tablenames =[["dbo.ServiceOrders"]
+            ], fieldsMatchColumns = yes}
+
+	SO_Nummer string            	{column="SO_Nummer", sqlVariableLen=yes, maxLen=50};
+	SO_Omschrijving string      	{column="SO_Omschrijving", isSqlNullable=yes, sqlVariableLen=yes};
+	SO_SoortWerk string         	{column="SO_SoortWerk", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_Code string              	{column="FP_Code", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_Omschrijving string      	{column="FP_Omschrijving", isSqlNullable=yes, sqlVariableLen=yes};
+	FP_Straat string            	{column="FP_Straat", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_Huisnummer int           	{column="FP_Huisnummer", isSqlNullable=yes};
+	FP_HuisnummerToev string    	{column="FP_HuisnummerToev", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_PostcodeAlf string       	{column="FP_PostcodeAlf", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_PostcodeNum int          	{column="FP_PostcodeNum", isSqlNullable=yes};
+	FP_Plaats string            	{column="FP_Plaats", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+	FP_Land string              	{column="FP_Land", isSqlNullable=yes, sqlVariableLen=yes, maxLen=50};
+            
+  end
