@@ -1,0 +1,21 @@
+package switch.services;
+
+import switch.access.serviceOrdersLib;
+import switch.data.inbaspfSQLrec;
+import switch.data.serviceOrdersSQLrec;
+
+// service
+
+service sapServices
+
+    // Variable Declarations
+    melding string;
+
+    function getServiceOrders(zoekServiceOrders serviceOrdersSQLrec in, serviceOrdersArray serviceOrdersSQLrec[] out) returns(string)
+        melding = "";
+        melding = serviceOrdersLib.getServiceOrders(zoekServiceOrders,
+                serviceOrdersArray);
+        return(melding);
+    end
+
+end
